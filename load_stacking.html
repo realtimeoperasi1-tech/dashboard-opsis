@@ -1,0 +1,815 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Load Stacking & Biaya - Realtime Opsis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" href="data:,">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; width: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Fix CSS Warning: Tambahkan standard 'appearance' */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        input[type=number] { -moz-appearance: textfield; appearance: textfield; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <!-- Tambahan transisi w-0 untuk efek hide/show -->
+    <aside id="sidebar" class="w-64 shrink-0 bg-white border-r border-slate-200 transition-all duration-300 overflow-hidden relative z-40">
+        <!-- Wrapper dalam agar desain tidak rusak saat sidebar mengecil -->
+        <div class="w-64 flex flex-col justify-between h-full">
+            <div>
+                <div class="p-8 pb-4">
+                    <h2 class="text-3xl font-bold text-blue-600 tracking-tight">PLN<span class="text-yellow-400">.</span></h2>
+                    <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Realtime Opsis 1</p>
+                </div>
+                <nav class="px-4 space-y-2 mt-2">
+                    <a href="index.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-chart-pie w-6 mr-3"></i>Dashboard</a>
+                    <a href="tegangan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-bolt w-6 mr-3"></i>Tegangan</a>
+                    
+                    <div class="space-y-1">
+                        <a href="frekuensi.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-wave-square w-6 mr-3"></i>Summary Frekuensi</a>
+                        <a href="sebaran.html" class="flex items-center px-4 py-2 ml-4 text-sm text-slate-400 font-medium hover:text-blue-600 transition"><i class="fa-solid fa-chart-bar w-5 mr-2 opacity-50"></i>Sebaran Frekuensi</a>
+                    </div>
+
+                    <!-- MENU BEBAN (DENGAN SUB MENU) -->
+                    <div class="space-y-1 pt-1">
+                        <a href="beban.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                            <i class="fa-solid fa-industry w-6 mr-3"></i>Load Profile
+                        </a>
+                        <a href="bank_data.html" class="flex items-center px-4 py-2 ml-4 bg-blue-50 text-blue-600 font-bold rounded-xl transition text-sm shadow-sm">
+                            <i class="fa-solid fa-database w-5 mr-2 text-blue-500"></i>Bank Data
+                            
+                        <a href="load_stacking.html" class="flex items-center px-4 py-2 ml-4 text-sm text-slate-400 font-medium hover:text-blue-600 transition">
+                        <i class="fa-solid fa-database w-5 mr-2 opacity-50"></i>Load Stacking
+                    </a>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+            <div class="p-6 border-t border-slate-100">
+                <button id="logout-btn" class="flex items-center px-4 py-2 w-full text-rose-500 font-medium hover:bg-rose-50 rounded-xl transition"><i class="fa-solid fa-arrow-right-from-bracket w-6 mr-2"></i>Logout</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- KONTEN UTAMA -->
+    <main class="flex-1 relative bg-slate-50 h-screen overflow-y-auto custom-scrollbar flex flex-col">
+        <!-- HEADER -->
+        <div class="bg-white border-b border-slate-200 px-8 py-5 flex justify-between items-center shrink-0 shadow-sm sticky top-0 z-30">
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center">
+                <div class="flex items-center">
+                <!-- Tombol Hamburger Toggle -->
+                <button id="sidebar-toggle" class="mr-5 text-slate-400 hover:text-blue-600 focus:outline-none transition bg-slate-50 hover:bg-blue-50 p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                </div>
+                <i class="fa-solid fa-layer-group text-blue-500 mr-3"></i>Load Stacking & Bauran Energi
+            </h1>
+            <div class="flex items-center bg-slate-50 border border-slate-200 p-1.5 rounded-xl shadow-sm">
+                <input type="date" id="filter-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-100 rounded-lg cursor-pointer">
+                <button onclick="fetchStackingData()" class="bg-blue-600 hover:bg-blue-700 text-white p-2 px-5 rounded-lg text-sm font-bold transition shadow-sm ml-2 flex items-center">
+                    <i class="fa-solid fa-rotate mr-2"></i>Sinkronisasi
+                </button>
+            </div>
+        </div>
+
+        <!-- LOADING INDICATOR -->
+        <div id="loading-indicator" class="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 bg-white/95 px-6 py-3 rounded-xl shadow-lg border border-slate-200 font-bold text-blue-600 hidden items-center">
+            <i class="fa-solid fa-circle-notch fa-spin mr-3"></i> Menarik data & Menyusun Kalkulasi...
+        </div>
+
+        <!-- AREA KONTEN -->
+        <div class="p-8 flex flex-col space-y-6 pb-20">
+            
+<!-- CONTAINER 2 GRAFIK BERDAMPINGAN -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 mt-6">
+            <!-- 1. GRAFIK RENCANA -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <h3 class="text-sm font-bold text-center bg-slate-400 text-white py-1 mb-2">RENCANA LOAD STACKING SISTEM (ROH)</h3>
+                <div class="relative h-[400px] w-full">
+                    <canvas id="stackChartRencana"></canvas>
+                </div>
+            </div>
+            
+            <!-- 2. GRAFIK REALISASI -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm">
+                <h3 class="text-sm font-bold text-center bg-slate-400 text-white py-1 mb-2">REALISASI LOAD STACKING SISTEM</h3>
+                <div class="relative h-[400px] w-full">
+                    <canvas id="stackChartRealisasi"></canvas>
+                </div>
+            </div>
+        </div>
+
+            <!-- 2. TABEL ENERGI PRIMER & GRAFIK DOUGHNUT -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Tabel Realisasi -->
+                <div class="lg:col-span-2 bg-white border border-slate-200 rounded-3xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-slate-700 text-lg uppercase tracking-wide">Komposisi Energi Primer <span class="text-blue-500">(Realisasi)</span></h2>
+                        <span class="bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded-lg text-xs">Satuan: MWh</span>
+                    </div>
+                    <div class="overflow-x-auto rounded-xl border border-slate-200">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead>
+                                <tr class="bg-emerald-500 text-white">
+                                    <th class="p-3.5 font-semibold">Energi Primer</th>
+                                    <th class="p-3.5 text-right font-semibold">Rencana (MWh)</th>
+                                    <th class="p-3.5 text-right font-semibold">Realisasi (MWh)</th>
+                                    <th class="p-3.5 text-right font-semibold">Deviasi (MWh)</th>
+                                    <th class="p-3.5 text-right font-semibold">% Deviasi</th>
+                                </tr>
+                            </thead>
+                            <tbody id="energi-table-body" class="text-slate-600 font-medium">
+                                <!-- Data akan diisi oleh Javascript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Grafik Doughnut -->
+                <div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 flex flex-col items-center justify-center">
+                    <h2 class="font-bold text-slate-700 text-lg uppercase tracking-wide mb-2 w-full text-center">Bauran Energi (Realisasi)</h2>
+                    <div class="relative w-full aspect-square max-h-[280px] mt-4">
+                        <canvas id="energyPieChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+<!-- 3. SUMMARY BIAYA ENERGI PEMBANGKIT -->
+            <div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 shrink-0 mt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-bold text-slate-700 text-lg uppercase tracking-wide">
+                        <i class="fa-solid fa-calculator text-blue-500 mr-2"></i>Estimasi Biaya Pembangkit
+                    </h2>
+                </div>
+                
+                <!-- FOOTER REKAP BIAYA SAJA -->
+                <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm mb-8">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="font-bold text-slate-700 text-lg uppercase tracking-wide">
+                        <i class="fa-solid fa-coins text-amber-500 mr-2"></i>Summary Biaya Energi Rata-Rata (BPP)
+                    </h2>
+                    <span class="text-xs font-semibold bg-slate-100 text-slate-500 px-3 py-1 rounded-full">
+                        Satuan: Rp / kWh
+                    </span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div class="bg-slate-50 border border-slate-200/80 rounded-2xl p-5 flex flex-col justify-between">
+                        <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                            Rencana (ROH)
+                        </span>
+                        <div class="mt-2 flex items-baseline">
+                            <span class="text-sm font-semibold text-slate-500 mr-1">Rp</span>
+                            <span id="bpp-rencana-val" class="text-3xl font-extrabold text-slate-700">0.00</span>
+                        </div>
+                        <span class="text-[11px] text-slate-400 mt-2">Target biaya energi harian</span>
+                    </div>
+
+                    <div class="bg-blue-50/50 border border-blue-200 rounded-2xl p-5 flex flex-col justify-between">
+                        <span class="text-xs font-bold text-blue-600 uppercase tracking-wider">
+                            Realisasi (Logsheet)
+                        </span>
+                        <div class="mt-2 flex items-baseline">
+                            <span class="text-sm font-semibold text-blue-600 mr-1">Rp</span>
+                            <span id="bpp-realisasi-val" class="text-3xl font-extrabold text-blue-700">0.00</span>
+                        </div>
+                        <span class="text-[11px] text-blue-500/80 mt-2">Aktual biaya operasi pembangkit</span>
+                    </div>
+
+                    <div id="bpp-deviasi-card" class="bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col justify-between transition">
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                                Deviasi (Real - Rencana)
+                            </span>
+                            <span id="bpp-deviasi-badge" class="text-[10px] font-bold px-2 py-0.5 rounded uppercase">-</span>
+                        </div>
+                        <div class="mt-2 flex items-baseline">
+                            <span id="bpp-deviasi-sign" class="text-2xl font-bold mr-0.5 text-slate-600"></span>
+                            <span class="text-sm font-semibold mr-1 text-slate-500">Rp</span>
+                            <span id="bpp-deviasi-val" class="text-3xl font-extrabold text-slate-700">0.00</span>
+                        </div>
+                        <span id="bpp-deviasi-note" class="text-[11px] text-slate-400 mt-2">Selisih terhadap rencana</span>
+                    </div>
+                </div>
+            </div>
+            </div>
+           <!-- 4. SUMMARY CAPACITY FACTOR (CF) -->
+            <div class="bg-white border border-slate-200 rounded-3xl shadow-sm p-6 shrink-0 mt-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="font-bold text-slate-700 text-lg uppercase tracking-wide">
+                        <i class="fa-solid fa-gauge-high text-blue-500 mr-2"></i>Rekapitulasi Capacity Factor (CF)
+                    </h2>
+                </div>
+                
+                <div class="overflow-x-auto rounded-xl border border-slate-200">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-600">
+                                <th class="p-3.5 font-semibold">Nama Pembangkit</th>
+                                <th class="p-3.5 text-right font-semibold">DMN / Kapasitas (MW)</th>
+                                <th class="p-3.5 text-right font-semibold">Produksi (MWh)</th>
+                                <th class="p-3.5 text-right font-semibold">Capacity Factor (%)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cf-table-body" class="text-slate-600 font-medium">
+                            <!-- Data CF akan diisi oleh Javascript -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+<script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('filter-date');
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+            
+            setTimeout(fetchStackingData, 500); 
+        });
+
+        document.getElementById('sidebar-toggle').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('w-0');
+            sidebar.classList.toggle('border-r-0');
+        });
+
+        // 1. VARIABEL GLOBAL UNTUK 2 GRAFIK
+        let stackChartRencanaInstance = null;
+        let stackChartRealisasiInstance = null;
+        let energyPieChartInstance = null;
+        let unitEnergyData = {}; 
+
+        function parseMW(valStr) {
+            if (!valStr) return 0;
+            let str = String(valStr).trim();
+            if (str.includes(',')) str = str.replace(/\./g, '').replace(',', '.');
+            let parsed = parseFloat(str) || 0;
+            if (parsed > 40000) {
+                let dateObj = new Date(Math.round((parsed - 25569) * 86400 * 1000));
+                return dateObj.getUTCDate() + ((dateObj.getUTCMonth() + 1) / 100);
+            }
+            return parsed;
+        }
+
+        const formatterRp = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 });
+        const formatterNum = new Intl.NumberFormat('id-ID', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+        const formatterAvg = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 1, maximumFractionDigits: 2 });
+
+async function fetchStackingData() {
+            const dateVal = document.getElementById('filter-date').value;
+            if(!dateVal) return;
+
+            const loader = document.getElementById('loading-indicator');
+            loader.style.display = 'flex';
+
+            const API_URL = 'https://script.google.com/macros/s/AKfycbyu2coUegPT9j2XMkvVEEFQqwhTq6JaPpr_7lIaUXfddtGg4V-mOQkpr03ZA6louDZo/exec';
+
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Jaringan bermasalah');
+                const rawData = await response.json();
+                
+                const bebanData = rawData.bebanData || []; 
+                const rencanaData = rawData.rencanaData || []; 
+                const bppData = rawData.bppData || rawData.bppSummary || []; // <-- TAMBAHKAN BARIS INI
+
+                // WADAH REALISASI (Sudah 50)
+                const catData = {
+                    'PLTU': new Array(50).fill(0), 'PLTMH': new Array(50).fill(0), 'PLTS': new Array(50).fill(0),
+                    'PLTD': new Array(50).fill(0), 'PLTGU': new Array(50).fill(0), 'STG': new Array(50).fill(0),
+                    'PLTG': new Array(50).fill(0), 'PADAM': new Array(50).fill(0)
+                };
+
+                // WADAH RENCANA (Sudah 50)
+                const rencanaCatData = {
+                    'PLTU': new Array(50).fill(0), 'PLTMH': new Array(50).fill(0), 'PLTS': new Array(50).fill(0),
+                    'PLTD': new Array(50).fill(0), 'PLTGU': new Array(50).fill(0), 'STG': new Array(50).fill(0),
+                    'PLTG': new Array(50).fill(0), 'PADAM': new Array(50).fill(0)
+                };
+
+                // --- 1. PROSES DATA RENCANA (ROH) ---
+                for (let r = 0; r < rencanaData.length; r++) {
+                    const row = rencanaData[r];
+                    const rawDate = row[0];
+                    if (!rawDate) continue;
+
+                    let rowDateFormatted = "";
+                    let parts = String(rawDate).split(/[-/]/); 
+                    if (parts.length === 3) {
+                        rowDateFormatted = parts[0].length === 4 ? `${parts[0]}-${parts[1]}-${parts[2]}` : `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+
+                    if (rowDateFormatted === dateVal) {
+                        let kat = String(row[1]).trim().toUpperCase();
+                        
+                        if (kat === 'PLTGU (LPE)' || kat === 'PLTGU (LOPE)') kat = 'PLTGU';
+                        if (kat === 'STG LPE' || kat === 'STG LOPE') kat = 'STG';
+                        if (kat === 'PLTG MPP') kat = 'PLTG';
+
+                        if (rencanaCatData[kat]) {
+                            for (let i = 0; i < 50; i++) { // <-- LOOPING RENCANA 50
+                                rencanaCatData[kat][i] = parseFloat(String(row[i+2]).replace(',', '.')) || 0;
+                            }
+                        }
+                    }
+                }
+                
+                let currentMode = 'PLTD'; 
+                unitEnergyData = {}; 
+
+                // --- 2. PROSES DATA REALISASI ---
+                for (let r = 0; r < bebanData.length; r++) {
+                    const row = bebanData[r];
+                    const rawDate = row[0];
+                    if (!rawDate) continue;
+
+                    let rowDateFormatted = "";
+                    let parts = String(rawDate).split(/[-/]/); 
+                    if (parts.length === 3) {
+                        rowDateFormatted = parts[0].length === 4 ? `${parts[0]}-${parts[1]}-${parts[2]}` : `${parts[2]}-${parts[1]}-${parts[0]}`;
+                    }
+
+                    if (rowDateFormatted === dateVal) {
+                        const name = String(row[1]).toUpperCase().trim();
+                        if (name === 'TOTAL' || name.includes('TOTAL GEN') || name.includes('SISTEM LOMBOK')) continue;
+
+                        if (name === 'PLTD AMPENAN' || name === 'PLTD PAOK MOTONG' || name === 'PLTD TAMAN' || name === 'PLTD') {
+                            currentMode = 'PLTD'; continue;
+                        } else if (name === 'PLTU JERANJANG' || name === 'PLTU') {
+                            currentMode = 'PLTU'; continue;
+                        } 
+
+                        let rowCategory = currentMode; 
+
+                        if (name.includes('PADAM')) rowCategory = 'PADAM';
+                        else if (name.includes('LOMBOK PEAKER-TRAFO 1') || name.includes('LOMBOK PEAKER-TRAFO 2')) rowCategory = 'PLTGU';
+                        else if (name.includes('LOMBOK PEAKER-TRAFO 3')) rowCategory = 'STG';
+                        else if (name.includes('SEWA') || name.includes('IPS') || name.includes('BATAM') || name.includes('COGINDO') || name.includes('NPS') || name.includes('MTU')) rowCategory = 'PLTD';
+                        else if (name.includes('MPP') || name.includes('PLTG')) rowCategory = 'PLTG';
+                        else if (name.includes('LED')) rowCategory = 'PLTU';
+                        else if (name.includes('CAKRA') || name.includes('KUKUSAN') || name.includes('K. PUTIH') || name.includes('PLTMH')) rowCategory = 'PLTMH';
+                        else if (name.includes('PLTS')) rowCategory = 'PLTS';
+
+                        let rowTotalMW = 0;
+                        
+                        for (let i = 0; i < 50; i++) { // <-- LOOPING REALISASI 50
+                            let val = parseMW(row[i + 2]); 
+                            catData[rowCategory][i] += val;
+                            rowTotalMW += val;
+                        }
+
+                        const isExcluded = name.includes('PADAM') || name.includes('PEMADAMAN') || name === 'UNIT 1' || name === 'UNIT 2' || name === 'UNIT 3' || name === 'UNIT 4';
+                        if (rowTotalMW > 0 && !isExcluded) {
+                            unitEnergyData[name] = (unitEnergyData[name] || 0) + (rowTotalMW / 2);
+                        }
+                    }
+                }
+
+// MERENDER SEMUA KOMPONEN
+                renderKeduaChart(catData, rencanaCatData);
+                renderEnergyMix(catData, rencanaCatData);
+                renderUnitCostTable(unitEnergyData);
+                updateBPPCardsFromDatabase(dateVal, bppData); // <-- TAMBAHKAN BARIS INI
+                renderCFTable(unitEnergyData);
+                
+                loader.style.display = 'none';
+
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                alert("Gagal memuat data dari Spreadsheet.");
+                loader.style.display = 'none';
+            }
+        }
+        // 2. FUNGSI UNTUK MERENDER 2 GRAFIK BERDAMPINGAN
+        function renderKeduaChart(catData, rencanaCatData) {
+            const ctxRencana = document.getElementById('stackChartRencana').getContext('2d');
+            const ctxRealisasi = document.getElementById('stackChartRealisasi').getContext('2d');
+            
+            if (stackChartRencanaInstance) stackChartRencanaInstance.destroy();
+            if (stackChartRealisasiInstance) stackChartRealisasiInstance.destroy();
+
+            const timeLabels = [];
+            for(let i = 1; i <= 48; i++) {
+                let m = i * 30;
+                let hh = Math.floor(m / 60) % 24;
+                let mm = m % 60;
+                let timeStr = `${hh}:${mm === 0 ? '00' : '30'}`;
+                if (timeStr === "0:00" || timeStr === "0:30") timeStr = i === 48 ? "0:00" : timeStr;
+                timeLabels.push(timeStr);
+            }
+
+            function buildDatasets(dataSource) {
+                return [
+                    { label: 'PLTU', data: dataSource['PLTU'], backgroundColor: '#7e22ce', borderColor: '#7e22ce', fill: true, pointRadius: 0, tension: 0.3 },
+                    { label: 'PLTMH', data: dataSource['PLTMH'], backgroundColor: '#0ea5e9', borderColor: '#0ea5e9', fill: true, pointRadius: 0, tension: 0.3 },
+                    { label: 'PLTS', data: dataSource['PLTS'], backgroundColor: '#eab308', borderColor: '#eab308', fill: true, pointRadius: 0, tension: 0.3 },
+                    { label: 'PLTD', data: dataSource['PLTD'], backgroundColor: '#d97706', borderColor: '#d97706', fill: true, pointRadius: 0, tension: 0.3 },
+                    { label: 'PLTGU (LOPE)', data: dataSource['PLTGU'], backgroundColor: '#1e3a8a', borderColor: '#1e3a8a', fill: true, pointRadius: 0, tension: 0.3 },
+                    { label: 'STG LOPE', data: dataSource['STG'], backgroundColor: '#16a34a', borderColor: '#16a34a', fill: true, pointRadius: 0, tension: 0.3 },
+                    { label: 'PLTG MPP', data: dataSource['PLTG'], backgroundColor: '#dc2626', borderColor: '#dc2626', fill: true, pointRadius: 0, tension: 0.3 },
+                    { label: 'PADAM', data: dataSource['PADAM'], backgroundColor: '#9ca3af', borderColor: '#9ca3af', fill: true, pointRadius: 0, tension: 0.3 }
+                ];
+            }
+
+            const commonOptions = {
+                responsive: true, maintainAspectRatio: false, interaction: { mode: 'index', intersect: false },
+                plugins: { 
+                    legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 8, font: { family: 'Inter', weight: 'bold', size: 10 } } }, 
+                    tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)', padding: 10, callbacks: { label: function(context) { let label = context.dataset.label || ''; if (label) { label += ': '; } if (context.parsed.y !== null) label += context.parsed.y.toFixed(2) + ' MW'; return label; } } } 
+                },
+                scales: { 
+                    x: { grid: { display: false }, ticks: { maxRotation: 45, minRotation: 45, font: { family: 'Inter', size: 9 } } }, 
+                    y: { max: 400, stacked: true, beginAtZero: true, grid: { color: '#e2e8f0', borderDash: [5, 5] }, ticks: { font: { family: 'Inter', size: 10 }, callback: function(value) { return value + ' MW'; } } } 
+                }
+            };
+
+            stackChartRencanaInstance = new Chart(ctxRencana, { type: 'line', data: { labels: timeLabels, datasets: buildDatasets(rencanaCatData) }, options: commonOptions });
+            stackChartRealisasiInstance = new Chart(ctxRealisasi, { type: 'line', data: { labels: timeLabels, datasets: buildDatasets(catData) }, options: commonOptions });
+        }
+
+ // 3. FUNGSI RENDER BAURAN ENERGI (UPDATED)
+        function renderEnergyMix(catData, rencanaCatData) {
+            // Index 37 adalah kolom WBP 18:45 dan Index 39 adalah 19:15. Kita abaikan agar MWh akurat
+            const skipIndices = [37, 39]; 
+            
+            const getMWh = (arr) => {
+                let sum = 0;
+                for(let i = 0; i < arr.length; i++) {
+                    if(!skipIndices.includes(i)) {
+                        sum += arr[i];
+                    }
+                }
+                return sum / 2;
+            };
+
+            const realisasiMix = {
+                'BBM': getMWh(catData['PLTD']) + getMWh(catData['PLTGU']) + getMWh(catData['PLTG']),
+                'Air': getMWh(catData['PLTMH']),
+                'Batubara': getMWh(catData['PLTU']),
+                'Surya': getMWh(catData['PLTS']),
+                'STG Lope': getMWh(catData['STG'])
+            };
+
+            const rencanaMix = {
+                'BBM': getMWh(rencanaCatData['PLTD']) + getMWh(rencanaCatData['PLTGU']) + getMWh(rencanaCatData['PLTG']),
+                'Air': getMWh(rencanaCatData['PLTMH']),
+                'Batubara': getMWh(rencanaCatData['PLTU']),
+                'Surya': getMWh(rencanaCatData['PLTS']),
+                'STG Lope': getMWh(rencanaCatData['STG'])
+            };
+
+            const totalReal = Object.values(realisasiMix).reduce((a, b) => a + b, 0);
+            const totalRencana = Object.values(rencanaMix).reduce((a, b) => a + b, 0);
+
+            const tbody = document.getElementById('energi-table-body');
+            let tbodyHTML = "";
+            const keys = ['BBM', 'Air', 'Batubara', 'Surya', 'STG Lope'];
+            
+            keys.forEach(k => {
+                let deviasi = realisasiMix[k] - rencanaMix[k];
+                
+                // Menghitung % Deviasi (Deviasi / Rencana * 100)
+                let pctDeviasi = 0;
+                if (rencanaMix[k] > 0) {
+                    pctDeviasi = (deviasi / rencanaMix[k]) * 100;
+                } else if (realisasiMix[k] > 0) {
+                    pctDeviasi = 100; // Jika rencana 0 tapi ada realisasi
+                }
+
+                // Styling warna deviasi: Merah jika over (+), Hijau jika under (-)
+                let colorDev = deviasi > 0 ? 'text-red-500' : (deviasi < 0 ? 'text-emerald-500' : 'text-slate-600');
+                let signDev = deviasi > 0 ? '+' : '';
+                let signPct = pctDeviasi > 0 ? '+' : '';
+                let borderStyle = k === 'STG Lope' ? 'border-b-2 border-emerald-500' : 'border-b border-slate-100';
+                
+                tbodyHTML += `
+                    <tr class="${borderStyle} hover:bg-slate-50 transition">
+                        <td class="p-3.5">${k}</td>
+                        <td class="p-3.5 text-right text-slate-500">${rencanaMix[k].toFixed(2)}</td>
+                        <td class="p-3.5 text-right font-bold text-blue-600">${realisasiMix[k].toFixed(2)}</td>
+                        <td class="p-3.5 text-right font-semibold ${colorDev}">${signDev}${deviasi.toFixed(2)}</td>
+                        <td class="p-3.5 text-right font-semibold ${colorDev}">${signPct}${pctDeviasi.toFixed(2)}%</td>
+                    </tr>
+                `;
+            });
+
+            // Perhitungan Baris Total
+            let totalDev = totalReal - totalRencana;
+            let totalPctDeviasi = 0;
+            if (totalRencana > 0) {
+                totalPctDeviasi = (totalDev / totalRencana) * 100;
+            } else if (totalReal > 0) {
+                totalPctDeviasi = 100;
+            }
+
+            let colorTotalDev = totalDev > 0 ? 'text-red-500' : (totalDev < 0 ? 'text-emerald-600' : 'text-slate-800');
+            let signTotalDev = totalDev > 0 ? '+' : '';
+            let signTotalPct = totalPctDeviasi > 0 ? '+' : '';
+
+            tbodyHTML += `
+                <tr class="bg-emerald-100/40 text-emerald-800 font-bold border-b-2 border-white">
+                    <td class="p-3.5">Total</td>
+                    <td class="p-3.5 text-right text-[15px]">${totalRencana.toFixed(2)}</td>
+                    <td class="p-3.5 text-right text-[15px] text-blue-700">${totalReal.toFixed(2)}</td>
+                    <td class="p-3.5 text-right text-[15px] ${colorTotalDev}">${signTotalDev}${totalDev.toFixed(2)}</td>
+                    <td class="p-3.5 text-right text-[15px] ${colorTotalDev}">${signTotalPct}${totalPctDeviasi.toFixed(2)}%</td>
+                </tr>
+            `;
+
+            tbody.innerHTML = tbodyHTML;
+
+            // Render Grafik Doughnut (Tetap menampilkan Realisasi)
+            const ctxPie = document.getElementById('energyPieChart').getContext('2d');
+            if(energyPieChartInstance) energyPieChartInstance.destroy();
+            
+            const colors = ['#ff3b30', '#34c759', '#00264d', '#ffcc00', '#22c55e']; 
+            energyPieChartInstance = new Chart(ctxPie, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(realisasiMix),
+                    datasets: [{ data: Object.values(realisasiMix), backgroundColor: colors, borderWidth: 3, borderColor: '#ffffff' }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false, cutout: '60%',
+                    plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, padding: 20, font: {family: 'Inter', size: 11, weight: 'bold'} } } }
+                }
+            });
+        }
+
+        // 4. KAMUS TARIF DEFAULT & FUNGSI BIAYA
+        const tarifDefault = {
+            "PENGGA": 10.0,
+            "NARMADA": 10.0,
+            "SANTONG": 10.0,
+            "KUMBI SEDAU": 852.8,
+            "KUKUSAN": 956.25,
+            "SESAOT": 1062.5,
+            "K. PUTIH": 1062.5,
+            "CAKRA": 1062.5,
+            "PLTMH SEGARA": 1062.5,
+            "KARANG BAYAN": 1343.75,
+            "BATU BEDIL": 1343.75,
+            "INC PLTS SAMBELIA": 1885.39,
+            "INC PLTS SENGKOL": 1945.72,
+            "INC PLTS PRINGGABAYA": 1960.44,
+            "INC PLTS PAOKMOTONG": 1997.8,
+            "PLTU LED #1": 819.23,
+            "PLTU LED #2": 819.23,
+            "PLTU JERANJANG #3": 922.41,
+            "PLTU JERANJANG #1": 930.41,
+            "PLTU JERANJANG #2": 1194.59,
+            "PLTMGU LOMBOK PEAKER (GAS)": 1950.23,
+            "PLTD AMPENAN #5": 3284.24,
+            "PLTD AMPENAN #8": 3286.5,
+            "PLTD AMPENAN #7": 3288.37,
+            "PLTD AMPENAN #3": 3416.17,
+            "PLTD AMPENAN #2": 3440.6,
+            "PLTD PAOKMOTONG #2": 3524.01,
+            "PLTD PAOKMOTONG #4": 3586.09,
+            "PLTD PAOKMOTONG #3": 3692.08,
+            "PLTD SW IPS PRINGGABAYA": 3823.26,
+            "LOMBOK PEAKER-TRAFO 1": 4434.79,
+            "LOMBOK PEAKER-TRAFO 2": 4434.79,
+            "PLTD AMPENAN #5 (B50)": 5018.65,
+            "PLTD AMPENAN #4": 5179.23,
+            "PLTD SW BATAM AMPENAN": 5487.16,
+            "PLTD SW BATAM JERANJANG": 5657.91,
+            "PLTD SW PLN ND AMPENAN": 5670.72,
+            "PLTD SW IPS JERANJANG": 5720.3,
+            "PLTD SW IPS AMPENAN": 5740.66,
+            "PLTD SW NPS PAOKMOTONG": 5821.84,
+            "PLTD AMPENAN #7 (B50)": 5846.93,
+            "PLTD SW PLN ND JERANJANG 1": 5864.88,
+            "PLTD SW PLN ND JERANJANG 2": 5867.89,
+            "PLTD SW IPS SAMBELIA 1": 5911.16,
+            "PLTG MPP 1 JERANJANG": 5936.94,
+            "PLTG MPP 2 JERANJANG": 5936.94,
+            "PLTD AMPENAN #3 (B50)": 5948.95,
+            "PLTD SW IPS SAMBELIA 2": 6003.44,
+            "PLTD AMPENAN #2 (B50)": 8489.43,
+            "PLTD AMPENAN #8 (B50)": 9954.57,
+            "PLTD TAMAN #5": 6136.45,
+            "PLTD TAMAN #4": 6743.36,
+            "PLTD TAMAN #3": 6879.67,
+            "PLTD TAMAN #1": 6971.5
+        };
+
+        
+
+                    function renderUnitCostTable(unitData) {
+    let totalKwhAll = 0;
+    let grandTotalCost = 0;
+
+    for (let [unitName, mwh] of Object.entries(unitData)) {
+        if (mwh > 0) {
+            const kwh = mwh * 1000;
+            // Gunakan typeof agar tidak crash jika tarifDefault tidak ada
+            const tarif = (typeof tarifDefault !== 'undefined' && tarifDefault[unitName]) ? tarifDefault[unitName] : 0; 
+            totalKwhAll += kwh;
+            grandTotalCost += (kwh * tarif);
+        }
+    }
+
+    let avgBiayaReal = totalKwhAll > 0 ? (grandTotalCost / totalKwhAll) : 0;
+
+    // --- PENGAMAN: Cek dulu elemennya ada atau tidak sebelum diisi ---
+    
+    // (Opsional) Jika ID ini masih ada di tempat lain, akan diisi. Jika tidak, akan dilewati.
+    const elEnergy = document.getElementById('grand-total-energy');
+    if (elEnergy) elEnergy.textContent = formatterNum.format(totalKwhAll) + ' kWh';
+
+    const elCost = document.getElementById('grand-total-cost');
+    if (elCost) elCost.textContent = formatterRp.format(grandTotalCost);
+
+    const elAvg = document.getElementById('avg-biaya-energi');
+    if (elAvg) elAvg.textContent = formatterAvg.format(avgBiayaReal);
+
+    // --- ISI KARTU TENGAH (Realisasi BPP yang baru) ---
+    const elRealVal = document.getElementById('bpp-realisasi-val');
+    if (elRealVal) {
+        elRealVal.textContent = avgBiayaReal.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    }
+}
+
+// =========================================================================
+// FUNGSI KHUSUS UPDATE KARTU BPP (RENCANA, REALISASI, DEVIASI)
+// =========================================================================
+function updateBPPCardsFromDatabase(targetDateStr, bppAllData) {
+    let rencRpKWh = 0;
+    let realRpKWh = 0;
+
+    if (bppAllData && bppAllData.length > 0) {
+        // Konversi tanggal filter (YYYY-MM-DD) agar bisa cocok dengan format DD-MM-YYYY atau sebaliknya
+        let dParts = String(targetDateStr || "").split('-');
+        let altDateStr = dParts.length === 3 ? `${dParts[2]}-${dParts[1]}-${dParts[0]}` : targetDateStr;
+
+        let foundRow = bppAllData.find(row => {
+            let tglRow = String(row[0] || "").replace(/'/g, "").trim();
+            let tglTarget = String(targetDateStr || "").replace(/'/g, "").trim();
+            return tglRow === tglTarget || tglRow === altDateStr;
+        });
+
+        if (foundRow) {
+            // STRUKTUR 7 KOLOM DATABASE_BPP:
+            // [0: Tgl, 1: Real_kWh, 2: Real_Rp, 3: Real_RpKWh, 4: Renc_kWh, 5: Renc_Rp, 6: Renc_RpKWh]
+            realRpKWh = parseFloat(foundRow[3]) || 0;
+            rencRpKWh = parseFloat(foundRow[6]) || 0; // Mengambil Rencana dari Kolom G (Indeks 6)
+        }
+    }
+
+    // Jika angka Realisasi dari database 0, ambil dari hitungan di renderUnitCostTable
+    if (realRpKWh === 0) {
+        let elReal = document.getElementById('bpp-realisasi-val');
+        if (elReal && elReal.innerText !== "0.00") {
+            realRpKWh = parseFloat(elReal.innerText.replace(/\./g, '').replace(/,/g, '.')) || 0;
+        }
+    }
+
+    let deviasi = realRpKWh - rencRpKWh;
+
+    // Render ke HTML dengan pengaman elemen
+    const elRenc = document.getElementById('bpp-rencana-val');
+    const elReal = document.getElementById('bpp-realisasi-val');
+    const elDevVal = document.getElementById('bpp-deviasi-val');
+    const elDevSign = document.getElementById('bpp-deviasi-sign');
+    const elDevCard = document.getElementById('bpp-deviasi-card');
+    const elDevBadge = document.getElementById('bpp-deviasi-badge');
+    const elDevNote = document.getElementById('bpp-deviasi-note');
+
+    if (elRenc) elRenc.textContent = rencRpKWh.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (elReal) elReal.textContent = realRpKWh.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    if (elDevVal) elDevVal.textContent = Math.abs(deviasi).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+    // Beri Warna Otomatis pada Kartu Deviasi
+    if (deviasi > 0 && rencRpKWh > 0) {
+        if (elDevSign) { elDevSign.textContent = "+"; elDevSign.className = "text-2xl font-bold mr-0.5 text-rose-600"; }
+        if (elDevVal) elDevVal.className = "text-3xl font-extrabold text-rose-600";
+        if (elDevCard) elDevCard.className = "bg-rose-50/60 border border-rose-200 rounded-2xl p-5 flex flex-col justify-between";
+        if (elDevBadge) { elDevBadge.textContent = "Lebih Mahal"; elDevBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded uppercase bg-rose-100 text-rose-700"; }
+        if (elDevNote) { elDevNote.textContent = "Biaya aktual melebihi target ROH"; elDevNote.className = "text-[11px] text-rose-500 mt-2"; }
+    } else if (deviasi < 0 && rencRpKWh > 0) {
+        if (elDevSign) { elDevSign.textContent = "-"; elDevSign.className = "text-2xl font-bold mr-0.5 text-emerald-600"; }
+        if (elDevVal) elDevVal.className = "text-3xl font-extrabold text-emerald-600";
+        if (elDevCard) elDevCard.className = "bg-emerald-50/60 border border-emerald-200 rounded-2xl p-5 flex flex-col justify-between";
+        if (elDevBadge) { elDevBadge.textContent = "Lebih Hemat"; elDevBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded uppercase bg-emerald-100 text-emerald-700"; }
+        if (elDevNote) { elDevNote.textContent = "Biaya aktual di bawah target ROH"; elDevNote.className = "text-[11px] text-emerald-600 mt-2"; }
+    } else {
+        if (elDevSign) elDevSign.textContent = "";
+        if (elDevVal) elDevVal.className = "text-3xl font-extrabold text-slate-700";
+        if (elDevCard) elDevCard.className = "bg-slate-50 border border-slate-200 rounded-2xl p-5 flex flex-col justify-between";
+        if (elDevBadge) { elDevBadge.textContent = rencRpKWh === 0 ? "-" : "Sesuai Target"; elDevBadge.className = "text-[10px] font-bold px-2 py-0.5 rounded uppercase bg-slate-200 text-slate-600"; }
+        if (elDevNote) { elDevNote.textContent = rencRpKWh === 0 ? "Data ROH belum tersedia" : "Biaya aktual sama dengan ROH"; elDevNote.className = "text-[11px] text-slate-400 mt-2"; }
+    }
+}                  
+
+        // KAMUS KAPASITAS PEMBANGKIT / DMN (Contoh - Silakan disesuaikan dengan data riil)
+// KAMUS KAPASITAS PEMBANGKIT / DMN (Daya Mampu Netto dalam MW)
+        const kapasitasDefault = {
+            "MTU AMPENAN": 1.60,
+            "PLTD AMPENAN #1": 0.00,
+            "PLTD AMPENAN #2": 4.00,
+            "PLTD AMPENAN #3": 4.00,
+            "PLTD AMPENAN #4": 3.00,
+            "PLTD AMPENAN #5": 6.00,
+            "PLTD AMPENAN #6": 0.00,
+            "PLTD AMPENAN #7": 4.50,
+            "PLTD AMPENAN #8": 6.00,
+            "PLTD TAMAN #1": 0.50,
+            "PLTD TAMAN #2": 0.00, // Keterangan asli: RU
+            "PLTD TAMAN #3": 0.50,
+            "PLTD TAMAN #4": 0.50,
+            "PLTD TAMAN #5": 2.20,
+            "PLTD PAOKMOTONG #2": 3.50,
+            "PLTD PAOKMOTONG #3": 3.50,
+            "PLTD PAOKMOTONG #4": 4.00,
+            "PLTD PAOKMOTONG #5": 0.00,
+            "MTU PAOKMOTONG": 0.00,
+            "PLTU JERANJANG #1": 22.50,
+            "PLTU JERANJANG #2": 22.50,
+            "PLTU JERANJANG #3": 22.50,
+            "PLTMGU LOMBOK PEAKER": 132.02,
+            "PLTG MPP 1 JERANJANG": 25.00,
+            "PLTG MPP 2 JERANJANG": 25.00,
+            "PLTU IPP LED #1": 25.00,
+            "PLTU IPP LED #2": 25.00,
+            "PLTU FTP SAMBELIA #1 (ONGOING)": 0.00,
+            "PLTU FTP SAMBELIA #2 (ONGOING)": 0.00,
+            "PLTD SW IPS PRINGGABAYA": 12.00,
+            "PLTD SW NPS PAOKMOTONG": 15.00,
+            "PLTD SW PLN ND AMPENAN": 10.00,
+            "PLTD SW PLN ND JERANJANG 1": 15.00,
+            "PLTD SW PLN ND JERANJANG 2": 15.00,
+            "PLTD SW BATAM AMPENAN": 5.00,
+            "PLTD SW BATAM JERANJANG": 20.00,
+            "PLTD SW IPS SAMBELIA 1": 10.00,
+            "PLTD SW IPS SAMBELIA 2": 5.00,
+            "PLTD SW IPS AMPENAN": 7.00,
+            "PLTD SW IPS JERANJANG": 8.00
+            // Tambahkan unit lainnya sesuai dengan key yang ada di tarifDefault...
+        };
+
+        // FUNGSI RENDER CF
+        function renderCFTable(unitData) {
+            const tbody = document.getElementById('cf-table-body');
+            let tbodyHTML = "";
+
+            // Mengurutkan data berdasarkan MWh terbesar
+            const sortedUnits = Object.entries(unitData).sort((a, b) => b[1] - a[1]);
+
+            sortedUnits.forEach(([unitName, mwh]) => {
+                if (mwh > 0) {
+                    const kapasitas = kapasitasDefault[unitName] || 0;
+                    
+                    let cfHTML = "-";
+                    let cfValue = 0;
+                    let cfColor = "text-slate-500";
+
+                    if (kapasitas > 0) {
+                        // Rumus CF: (MWh / (MW * 24 Jam)) * 100
+                        cfValue = (mwh / (kapasitas * 24)) * 100;
+                        
+                        // Mewarnai text berdasarkan tingginya CF
+                        if (cfValue >= 80) cfColor = "text-emerald-600 font-bold";
+                        else if (cfValue >= 40) cfColor = "text-blue-600 font-bold";
+                        else cfColor = "text-amber-500 font-bold";
+
+                        cfHTML = `${cfValue.toFixed(2)}%`;
+                    } else {
+                        cfHTML = `<span class="text-xs bg-rose-100 text-rose-600 px-2 py-1 rounded">DMN Belum Diisi</span>`;
+                    }
+
+                    tbodyHTML += `
+                        <tr class="border-b border-slate-100 hover:bg-slate-50 transition">
+                            <td class="p-3.5">${unitName}</td>
+                            <td class="p-3.5 text-right text-slate-500">${kapasitas > 0 ? kapasitas.toFixed(2) : '-'}</td>
+                            <td class="p-3.5 text-right text-slate-800">${mwh.toFixed(2)}</td>
+                            <td class="p-3.5 text-right ${cfColor}">${cfHTML}</td>
+                        </tr>
+                    `;
+                }
+            });
+
+            tbody.innerHTML = tbodyHTML;
+        }
+    </script>
+</body>
+</html>

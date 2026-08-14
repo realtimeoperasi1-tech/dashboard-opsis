@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sebaran Frekuensi - Realtime Opsis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- LIBRARY CHART.JS -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="icon" href="data:,">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { height: 10px; width: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shadow-sm z-40 relative shrink-0">
+        <div>
+            <div class="p-8">
+                <h2 class="text-3xl font-bold text-blue-600 tracking-tight">PLN<span class="text-yellow-400">.</span></h2>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Realtime Opsis 1</p>
+            </div>
+            <nav class="px-4 space-y-2 mt-4">
+                <a href="index.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-chart-pie w-6 mr-3"></i>Dashboard</a>
+                <a href="tegangan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-bolt w-6 mr-3"></i>Tegangan</a>
+                
+                <!-- MENU FREKUENSI -->
+                <div class="space-y-1">
+                    <a href="frekuensi.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-wave-square w-6 mr-3"></i>Summary Frekuensi
+                    </a>
+                    <a href="sebaran.html" class="flex items-center px-4 py-2 ml-4 bg-blue-50 text-blue-600 font-bold rounded-xl transition text-sm shadow-sm">
+                        <i class="fa-solid fa-chart-bar w-5 mr-2 text-blue-500"></i>Sebaran Frekuensi
+                    </a>
+                </div>
+
+                <a href="beban.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-industry w-6 mr-3"></i>Load Profile</a>
+                <a href="rekap_pembebanan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-network-wired w-6 mr-3"></i>Pembebanan Trafo dan Line Transmisi
+                    </a>
+            </nav>
+        </div>
+        <div class="p-6 border-t border-slate-100">
+            <button id="logout-btn" class="flex items-center px-4 py-2 w-full text-rose-500 font-medium hover:bg-rose-50 rounded-xl transition"><i class="fa-solid fa-arrow-right-from-bracket w-6 mr-2"></i>Logout</button>
+        </div>
+    </aside>
+
+    <!-- KONTEN -->
+    <main class="flex-1 p-8 relative bg-slate-50 h-screen overflow-y-auto custom-scrollbar">
+        
+        <!-- HEADER & FILTER RENTANG TANGGAL -->
+        <div class="flex justify-between items-end mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 flex items-center">
+                    <i class="fa-solid fa-chart-bar text-blue-500 mr-4"></i>Sebaran Frekuensi
+                </h1>
+                <p class="text-sm text-slate-500 mt-2 font-medium ml-12">Spektrum frekuensi (49.0 - 51.0 Hz) berdasarkan rentang tanggal.</p>
+            </div>
+            
+            <div class="flex items-center bg-white border border-slate-300 p-1.5 rounded-xl shadow-sm">
+                <input type="date" id="start-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-50 rounded-lg cursor-pointer" title="Tanggal Mulai">
+                <span class="text-slate-300 font-bold mx-1"><i class="fa-solid fa-arrow-right"></i></span>
+                <input type="date" id="end-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-50 rounded-lg cursor-pointer" title="Tanggal Selesai">
+                <button id="filter-btn" class="bg-blue-500 hover:bg-blue-600 text-white p-2.5 px-6 rounded-lg text-sm font-bold transition shadow-sm ml-2">Tampilkan</button>
+            </div>
+        </div>
+
+        <!-- INFO WAKTU KOSONG -->
+        <div id="empty-state" class="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-2xl shadow-sm py-24 mt-4">
+            <i class="fa-regular fa-calendar-check text-6xl text-blue-100 mb-4"></i>
+            <p class="text-slate-500 font-medium">Silakan pilih rentang tanggal mulai dan selesai.</p>
+        </div>
+
+        <!-- AREA KONTEN (GRAFIK & TABEL) -->
+        <div id="content-area" class="hidden flex-col space-y-6 mt-4 pb-12">
+            
+            <!-- CANVAS GRAFIK -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm p-4 relative w-full h-[380px] flex flex-col">
+                <div class="flex-1 w-full relative">
+                    <canvas id="sebaranChart"></canvas>
+                </div>
+                <!-- INFO MAX MIN AVG DI BAWAH GRAFIK -->
+                <div class="text-center mt-3 font-bold text-slate-700 tracking-wide text-sm">
+                    MAX = <span id="val-max" class="text-rose-500"></span> &nbsp;&nbsp;&nbsp; 
+                    MIN = <span id="val-min" class="text-blue-600"></span> &nbsp;&nbsp;&nbsp; 
+                    AVG = <span id="val-avg" class="text-emerald-600"></span>
+                </div>
+            </div>
+
+            <!-- TABEL SEBARAN -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden relative">
+                <div class="bg-slate-50 px-5 py-4 border-b border-slate-200 flex justify-between items-center">
+                    <div class="text-sm font-bold text-slate-700"><i class="fa-solid fa-table-list text-blue-500 mr-2"></i>Detail Durasi Kalkulasi</div>
+                    <div id="result-info" class="text-xs font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-sm"></div>
+                </div>
+                <!-- Area tabel dengan scroll menyamping -->
+                <div class="overflow-x-auto custom-scrollbar relative w-full">
+                    <table class="w-full text-left border-collapse whitespace-nowrap min-w-max border-spacing-0">
+                        <thead id="sebaran-header"></thead>
+                        <tbody id="sebaran-body" class="text-sm text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // GANTI DENGAN URL DEPLOYMENT ANDA YANG TERBARU
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyM-LYkhRX1BqH-i9dDZPwGy8A4wKO3QvhO_ldpiH-nsZy_qM8P9gsCJDS9JUIlUExq/exec'; 
+        let allSebaranData = [];
+        let chartInstance = null;
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const btnFilter = document.getElementById('filter-btn');
+            btnFilter.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`; btnFilter.disabled = true;
+            fetch(GAS_URL, { redirect: 'follow' }).then(res => res.json()).then(data => {
+                allSebaranData = data.sebaranData || []; btnFilter.innerHTML = "Tampilkan"; btnFilter.disabled = false;
+            }).catch(err => { alert("Gagal menarik data."); btnFilter.innerHTML = "Error"; });
+        });
+
+        // Helper Tanggal
+        function parseDate(dStr) {
+            let p = dStr.split('-'); return new Date(p[2], p[1]-1, p[0]);
+        }
+
+        document.getElementById('filter-btn').addEventListener('click', () => {
+            let startVal = document.getElementById('start-date').value;
+            let endVal = document.getElementById('end-date').value;
+            
+            if(!startVal || !endVal) return alert("Pilih rentang tanggal (Mulai & Selesai)!");
+            if(new Date(startVal) > new Date(endVal)) return alert("Tanggal Mulai tidak boleh lebih dari Tanggal Selesai.");
+            
+            let startD = new Date(startVal); startD.setHours(0,0,0,0);
+            let endD = new Date(endVal); endD.setHours(23,59,59,999);
+            
+            // 1. Filter Data berdasarkan Rentang Tanggal
+            let filteredRows = allSebaranData.filter(row => {
+                let rowDStr = String(row[0]).replace(/'/g, "").trim();
+                let rowDate = parseDate(rowDStr);
+                return rowDate >= startD && rowDate <= endD;
+            });
+            
+            const emptyState = document.getElementById('empty-state');
+            const contentArea = document.getElementById('content-area');
+
+            if(filteredRows.length === 0) {
+                emptyState.classList.remove('hidden'); contentArea.classList.add('hidden');
+                emptyState.innerHTML = `<i class="fa-solid fa-box-open text-6xl text-rose-200 mb-4"></i><p class="text-rose-500 font-bold">Data kosong pada rentang tanggal tersebut.</p>`;
+                return;
+            }
+
+            emptyState.classList.add('hidden'); contentArea.classList.remove('hidden');
+            
+            // 2. Agregasi (Penjumlahan) Data
+            let aggregated = new Array(201).fill(0);
+            filteredRows.forEach(row => {
+                for(let i=1; i<=201; i++) { aggregated[i-1] += (parseInt(row[i]) || 0); }
+            });
+
+            // 3. Kalkulasi Data (Min, Max, Avg) & Label
+            let labels = []; let chartData = [];
+            let totalCount = 0; let sumFreq = 0;
+            let maxF = null; let minF = null;
+
+            for(let i = 0; i < 201; i++) {
+                let freqVal = (49.00 + (i * 0.01));
+                let count = aggregated[i];
+                labels.push(freqVal.toFixed(2));
+                
+                // Set 'null' jika 0 agar Grafik Logaritmik tidak error
+                chartData.push(count > 0 ? count : null);
+
+                if(count > 0) {
+                    if(minF === null) minF = freqVal; 
+                    maxF = freqVal; // Nilai iterasi terakhir yg >0 otomatis jadi max
+                    totalCount += count;
+                    sumFreq += (freqVal * count);
+                }
+            }
+
+            let avgF = totalCount > 0 ? (sumFreq / totalCount).toFixed(3) : "0.000";
+            document.getElementById('val-max').innerText = maxF ? maxF.toFixed(2) : "-";
+            document.getElementById('val-min').innerText = minF ? minF.toFixed(2) : "-";
+            document.getElementById('val-avg').innerText = avgF;
+            document.getElementById('result-info').innerText = `Total Kalkulasi: ${filteredRows.length} Hari`;
+
+            // 4. Render Chart.js
+            const ctx = document.getElementById('sebaranChart').getContext('2d');
+            if(chartInstance) chartInstance.destroy();
+            
+            chartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Durasi (Detik)',
+                        data: chartData,
+                        backgroundColor: '#60a5fa', // Warna Biru
+                        barPercentage: 1.0,
+                        categoryPercentage: 1.0
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            type: 'logarithmic', // SKALA LOGARITMIK
+                            grid: { color: 'rgba(239, 68, 68, 0.4)', lineWidth: 1.5 }, // Garis Merah
+                            ticks: {
+                                callback: function(value) {
+                                    // Tampilkan hanya kelipatan 10 (1, 10, 100, 1000...)
+                                    if(value===1||value===10||value===100||value===1000||value===10000||value===100000||value===1000000) return value;
+                                    return null;
+                                },
+                                font: { size: 10 }
+                            },
+                            min: 1
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: {
+                                maxRotation: 90, minRotation: 90,
+                                callback: function(val, index) {
+                                    // Munculkan label x-axis setiap 0.10 Hz (tiap 10 index)
+                                    return index % 10 === 0 ? labels[index] : '';
+                                },
+                                font: { size: 10 }
+                            }
+                        }
+                    },
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: { mode: 'index', intersect: false }
+                    }
+                }
+            });
+
+           // 5. Render Tabel Bawah (DETAIL PER HARI)
+            let thead = document.getElementById('sebaran-header');
+            let tbody = document.getElementById('sebaran-body');
+            
+            // Header tabel: Kolom pertama diubah menjadi 'Tanggal'
+            let headerHTML = `<tr><th class="p-3 sticky left-0 top-0 bg-red-600 text-white z-30 border-r border-red-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] min-w-[130px] font-bold text-center text-xs">Tanggal</th>`;
+            
+            // Header Horizontal (49.00 - 51.00)
+            for(let i = 0; i < 201; i++) {
+                headerHTML += `<th class="p-2 text-center sticky top-0 bg-red-600 text-white z-20 border-b border-r border-red-700/50 text-[11px] min-w-[50px]">${labels[i]}</th>`;
+            }
+            headerHTML += `</tr>`; 
+
+            // Body tabel: Looping untuk membuat baris per tanggal
+            let bodyHTML = "";
+            
+            filteredRows.forEach(row => {
+                let tanggal = String(row[0]).replace(/'/g, "").trim();
+                
+                // Kolom Tanggal (Kiri, menempel/sticky)
+                bodyHTML += `<tr><td class="p-3 font-bold text-slate-800 text-center sticky left-0 z-20 bg-slate-100 border-r border-slate-300 border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">${tanggal}</td>`;
+                
+                // Looping data detik per frekuensi (49.00 - 51.00)
+                for(let i = 1; i <= 201; i++) {
+                    let detik = parseInt(row[i]) || 0;
+                    
+                    // Styling visual: background biru tipis jika ada isinya
+                    let txtClass = detik > 0 ? "text-slate-800 font-bold bg-blue-50/50" : "text-slate-300 font-medium";
+                    
+                    bodyHTML += `<td class="p-2 text-center border-r border-b border-slate-200/60 text-xs ${txtClass}">${detik}</td>`;
+                }
+                bodyHTML += `</tr>`;
+            });
+            
+            thead.innerHTML = headerHTML; 
+            tbody.innerHTML = bodyHTML;
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', (e) => { e.preventDefault(); localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html'; });
+    </script>
+</body>
+</html>

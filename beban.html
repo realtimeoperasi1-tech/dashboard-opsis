@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beban Pembangkit - Realtime Opsis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:,">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { height: 12px; width: 12px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; border: 3px solid #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+   <!-- SIDEBAR -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shadow-sm z-10 relative shrink-0">
+        <div>
+            <div class="p-8">
+                <h2 class="text-3xl font-bold text-blue-600 tracking-tight">PLN<span class="text-yellow-400">.</span></h2>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Realtime Opsis 1</p>
+            </div>
+            <nav class="px-4 space-y-2 mt-4 overflow-y-auto">
+                <a href="index.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-chart-pie w-6 mr-3"></i>Dashboard
+                </a>
+                <a href="tegangan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-bolt w-6 mr-3"></i>Tegangan
+                </a>
+                <div class="space-y-1">
+                    <a href="frekuensi.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-wave-square w-6 mr-3"></i>Summary Frekuensi
+                    </a>
+                </div>
+                
+                <div class="space-y-1 pt-1 mt-2">
+                    <a href="beban.html" class="flex items-center px-4 py-3 bg-blue-50 text-blue-600 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                     <i class="fa-solid fa-industry w-6 mr-3"></i>Load Profile
+                    </a>
+                    <a href="bank_data.html" class="flex items-center px-4 py-2 ml-4 text-sm text-slate-400 font-medium hover:text-blue-600 transition">
+                        <i class="fa-solid fa-database w-5 mr-2 opacity-50"></i>Bank Data
+                    </a>
+                    <a href="load_stacking.html" class="flex items-center px-4 py-2 ml-4 text-sm text-slate-400 font-medium hover:text-blue-600 transition">
+                        <i class="fa-solid fa-database w-5 mr-2 opacity-50"></i>Load Stacking
+                    </a>
+                </div>
+
+                <div class="space-y-1 pt-1 mt-2">
+                    <a href="rekap_pembebanan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-network-wired w-6 mr-3"></i>Pembebanan Trafo dan Line Transmisi
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="flex-1 p-8 relative bg-slate-50 flex flex-col h-screen overflow-hidden">
+        
+        <!-- HEADER & ACTIONS -->
+        <div class="flex flex-col xl:flex-row xl:items-end justify-between mb-6 gap-4 shrink-0">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-800 flex items-center">
+                    <!-- Tombol Hamburger Toggle -->
+                <button id="sidebar-toggle" class="mr-5 text-slate-400 hover:text-blue-600 focus:outline-none transition bg-slate-50 hover:bg-blue-50 p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                    <i class="fa-solid fa-industry text-blue-500 mr-4"></i>Load Profile Pembangkit
+                </h1>
+                <p class="text-sm text-slate-500 mt-2 font-medium ml-12">Monitoring beban per 30 menit (MW).</p>
+            </div>
+            
+            <div class="flex items-center bg-white border border-slate-300 p-1.5 rounded-xl shadow-sm">
+                <input type="date" id="filter-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-50 rounded-lg">
+                <button id="filter-btn" class="bg-blue-500 hover:bg-blue-600 text-white p-2.5 px-5 rounded-lg text-sm font-bold transition shadow-sm ml-1">Tampilkan</button>
+            </div>
+        </div>
+
+        <!-- TABLE CONTAINER (Kunci Utama Scrollbar Selalu Terlihat) -->
+        <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-1 flex flex-col min-h-0 relative z-10">
+            <div class="overflow-auto custom-scrollbar flex-1 relative">
+                <table class="w-full text-left border-collapse whitespace-nowrap min-w-max border-spacing-0">
+                    <thead>
+                        <tr id="table-header" class="text-slate-600 text-[11px] uppercase tracking-wider font-bold">
+                            <!-- JS Header Render -->
+                        </tr>
+                    </thead>
+                    <tbody id="table-body" class="text-sm text-slate-700">
+                        <tr><td colspan="49" class="p-20 text-center text-slate-400 font-medium text-base"><i class="fa-regular fa-calendar-check text-4xl mb-3 block text-blue-100"></i>Silakan pilih tanggal.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // GANTI DENGAN URL GAS ANDA
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyu2coUegPT9j2XMkvVEEFQqwhTq6JaPpr_7lIaUXfddtGg4V-mOQkpr03ZA6louDZo/exec'; 
+        let allBebanData = [];
+        let bebanHeaderRaw = []; // Penampung jam dinamis
+
+        document.getElementById('sidebar-toggle').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('w-0');
+            sidebar.classList.toggle('border-r-0');
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const btnFilter = document.getElementById('filter-btn');
+            btnFilter.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`; btnFilter.disabled = true;
+            
+            fetch(GAS_URL, { redirect: 'follow' })
+            .then(res => res.json())
+            .then(data => {
+                allBebanData = data.bebanData || []; 
+                bebanHeaderRaw = data.bebanHeader || []; 
+                
+                // Fallback jika API belum terupdate (48 jam standar)
+                if(bebanHeaderRaw.length === 0) {
+                    bebanHeaderRaw = ["Tanggal", "Nama Mesin"];
+                    for (let i = 1; i <= 48; i++) {
+                        let m = i * 30; let h = Math.floor(m / 60) % 24; let mins = m % 60;
+                        let timeStr = String(h).padStart(2, '0') + ":" + String(mins).padStart(2, '0');
+                        bebanHeaderRaw.push(timeStr === "00:00" ? "24:00" : timeStr);
+                    }
+                }
+
+                // MERENDER HEADER TABEL SECARA DINAMIS
+                const thead = document.getElementById('table-header');
+                let headerHTML = `<th class="p-4 sticky top-0 left-0 bg-slate-200 z-30 border-b border-r border-slate-300 shadow-[2px_2px_5px_-2px_rgba(0,0,0,0.1)]">Nama Mesin / Pembangkit</th>`;
+                
+                // Mulai dari index 2 (Mengabaikan Tanggal dan Nama Mesin)
+                for (let i = 2; i < bebanHeaderRaw.length; i++) {
+                    headerHTML += `<th class="p-3 text-center sticky top-0 bg-slate-100 z-20 border-b border-r border-slate-200/50">${bebanHeaderRaw[i]}</th>`;
+                }
+                thead.innerHTML = headerHTML;
+
+                btnFilter.innerHTML = "Tampilkan"; btnFilter.disabled = false;
+            }).catch(err => { 
+                alert("Gagal menarik data."); btnFilter.innerHTML = "Error"; 
+            });
+        });
+
+        document.getElementById('filter-btn').addEventListener('click', () => {
+            let dateVal = document.getElementById('filter-date').value;
+            if(!dateVal) return alert("Pilih tanggal di kalender!");
+            let targetStr = dateVal.split('-').reverse().join('-'); 
+            let filtered = allBebanData.filter(row => String(row[0]).replace(/'/g, "").trim() === targetStr);
+            let tbody = document.getElementById('table-body');
+            
+            let totalColspan = bebanHeaderRaw.length - 1; // Menghitung total kolom (dikurangi 1 untuk Tanggal)
+
+            if(filtered.length === 0) return tbody.innerHTML = `<tr><td colspan="${totalColspan}" class="p-10 text-center text-rose-500 font-medium">Data beban tidak ditemukan untuk tanggal ${targetStr}.</td></tr>`;
+
+            let html = '';
+            filtered.forEach(row => {
+                let nama = String(row[1]).trim();
+                let isGroupHeader = row[2] === "" && row[3] === "" && row[4] === ""; 
+                let isTotal = nama.toUpperCase() === "TOTAL";
+                let isTotalGen = nama.toUpperCase() === "TOTAL GEN"; 
+
+                let trClass = "hover:bg-slate-50 transition border-b border-slate-100";
+                let tdNamaClass = "p-3 font-semibold text-slate-700 sticky left-0 z-10 border-r border-slate-300 bg-white shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)] min-w-[180px] text-[11px]";
+
+                if(isGroupHeader) {
+                    trClass = "bg-blue-50/80 hover:bg-blue-100 border-b border-blue-100";
+                    tdNamaClass = "p-3 font-bold text-blue-800 uppercase sticky left-0 z-10 border-r border-blue-200 bg-blue-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)] min-w-[180px] text-[12px]";
+                } else if (isTotalGen) {
+                    trClass = "bg-emerald-50 hover:bg-emerald-100 border-y-2 border-emerald-300";
+                    tdNamaClass = "p-4 font-black text-emerald-900 text-lg sticky left-0 z-10 border-r-2 border-emerald-300 bg-emerald-50 min-w-[180px] shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]";
+                } else if (isTotal) {
+                    trClass = "bg-amber-50/80 hover:bg-amber-100 border-b-2 border-amber-200";
+                    tdNamaClass = "p-3 font-bold text-amber-800 sticky left-0 z-10 border-r border-amber-200 bg-amber-50 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.08)] min-w-[180px] text-[11px]";
+                }
+
+                html += `<tr class="${trClass}"><td class="${tdNamaClass}">${nama}</td>`;
+                
+                // LOOP DINAMIS: Mengekstrak isi tabel mengikuti panjang header (bukan mentok di 49)
+                for(let i = 2; i < bebanHeaderRaw.length; i++) {
+                    let val = (row[i] !== undefined) ? row[i] : "";
+                    if(isGroupHeader && !isTotalGen) val = "";
+                    let txtColor = isTotalGen ? "text-emerald-700 font-black text-base" : (isTotal ? "text-amber-800 font-bold" : (val === "0.00" ? "text-slate-300" : "text-slate-600 font-medium"));
+                    let bRight = isTotalGen ? "border-r-2 border-emerald-200/50" : "border-r border-slate-200/60";
+                    html += `<td class="p-2 text-center ${bRight} text-[11px] ${txtColor}">${val}</td>`;
+                }
+                html += `</tr>`;
+
+                if(isTotalGen) {
+                    html += `<tr class="bg-transparent"><td colspan="${totalColspan}" class="h-8 bg-slate-200/40 border-y border-slate-300"></td></tr>`;
+                }
+            });
+            tbody.innerHTML = html;
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', (e) => { e.preventDefault(); localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html'; });
+    </script>
+</body>
+</html>

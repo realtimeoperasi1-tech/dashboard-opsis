@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bank Data Total Gen - Realtime Opsis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:,">
+    <style>
+        .custom-scrollbar::-webkit-scrollbar { height: 10px; width: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <!-- Tambahan transisi w-0 untuk efek hide/show -->
+    <aside id="sidebar" class="w-64 shrink-0 bg-white border-r border-slate-200 transition-all duration-300 overflow-hidden relative z-40">
+        <!-- Wrapper dalam agar desain tidak rusak saat sidebar mengecil -->
+        <div class="w-64 flex flex-col justify-between h-full">
+            <div>
+                <div class="p-8 pb-4">
+                    <h2 class="text-3xl font-bold text-blue-600 tracking-tight">PLN<span class="text-yellow-400">.</span></h2>
+                    <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Realtime Opsis 1</p>
+                </div>
+                <nav class="px-4 space-y-2 mt-2">
+                    <a href="index.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-chart-pie w-6 mr-3"></i>Dashboard</a>
+                    <a href="tegangan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-bolt w-6 mr-3"></i>Tegangan</a>
+                    
+                    <div class="space-y-1">
+                        <a href="frekuensi.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition"><i class="fa-solid fa-wave-square w-6 mr-3"></i>Summary Frekuensi</a>
+                        <a href="sebaran.html" class="flex items-center px-4 py-2 ml-4 text-sm text-slate-400 font-medium hover:text-blue-600 transition"><i class="fa-solid fa-chart-bar w-5 mr-2 opacity-50"></i>Sebaran Frekuensi</a>
+                    </div>
+
+                    <!-- MENU BEBAN (DENGAN SUB MENU) -->
+                    <div class="space-y-1 pt-1">
+                        <a href="beban.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                            <i class="fa-solid fa-industry w-6 mr-3"></i>Load Profile
+                        </a>
+                        <a href="bank_data.html" class="flex items-center px-4 py-2 ml-4 bg-blue-50 text-blue-600 font-bold rounded-xl transition text-sm shadow-sm">
+                            <i class="fa-solid fa-database w-5 mr-2 text-blue-500"></i>Bank Data
+                            
+                        <a href="load_stacking.html" class="flex items-center px-4 py-2 ml-4 text-sm text-slate-400 font-medium hover:text-blue-600 transition">
+                        <i class="fa-solid fa-database w-5 mr-2 opacity-50"></i>Load Stacking
+                    </a>
+                        </a>
+                    </div>
+                </nav>
+            </div>
+            <div class="p-6 border-t border-slate-100">
+                <button id="logout-btn" class="flex items-center px-4 py-2 w-full text-rose-500 font-medium hover:bg-rose-50 rounded-xl transition"><i class="fa-solid fa-arrow-right-from-bracket w-6 mr-2"></i>Logout</button>
+            </div>
+        </div>
+    </aside>
+
+    <!-- KONTEN -->
+    <main class="flex-1 relative bg-slate-50 h-screen overflow-y-auto custom-scrollbar flex flex-col">
+        
+        <!-- HEADER ATAS (Dengan Tombol Toggle) -->
+        <div class="bg-white border-b border-slate-200 px-8 py-4 flex justify-between items-center shrink-0 shadow-sm sticky top-0 z-30">
+            <div class="flex items-center">
+                <!-- Tombol Hamburger Toggle -->
+                <button id="sidebar-toggle" class="mr-5 text-slate-400 hover:text-blue-600 focus:outline-none transition bg-slate-50 hover:bg-blue-50 p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                <div>
+                    <h1 class="text-2xl font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-database text-blue-500 mr-3"></i>Bank Data Total Gen
+                    </h1>
+                </div>
+            </div>
+            
+            <div class="flex items-center bg-slate-50 border border-slate-200 p-1.5 rounded-xl shadow-sm">
+                <input type="date" id="start-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-100 rounded-lg cursor-pointer">
+                <span class="text-slate-400 font-bold mx-1"><i class="fa-solid fa-arrow-right"></i></span>
+                <input type="date" id="end-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-100 rounded-lg cursor-pointer">
+                <button id="filter-btn" class="bg-blue-500 hover:bg-blue-600 text-white p-2 px-5 rounded-lg text-sm font-bold transition shadow-sm ml-2">Tarik Data</button>
+                <!-- TOMBOL DOWNLOAD BARU -->
+                <button id="download-btn" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white p-2 px-4 rounded-lg text-sm font-bold transition shadow-sm ml-2"><i class="fa-solid fa-file-excel mr-2"></i>Download</button>
+            </div>
+        </div>
+
+        <div class="p-8 flex-1 flex flex-col">
+            <!-- INFO WAKTU KOSONG -->
+            <div id="empty-state" class="flex flex-col items-center justify-center bg-white border border-slate-200 rounded-2xl shadow-sm py-24">
+                <i class="fa-solid fa-file-invoice text-6xl text-blue-100 mb-4"></i>
+                <p class="text-slate-500 font-medium">Pilih rentang tanggal untuk memuat riwayat Total Gen.</p>
+            </div>
+
+            <!-- AREA TABEL -->
+            <div id="content-area" class="hidden bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden relative flex-1 flex-col">
+                <div class="bg-slate-50 px-5 py-3 border-b border-slate-200 flex justify-between items-center shrink-0">
+                    <div class="text-sm font-bold text-slate-700"><i class="fa-solid fa-table text-blue-500 mr-2"></i>Histori TOTAL GEN (MW)</div>
+                    <div id="result-info" class="text-xs font-semibold text-slate-500 bg-white px-3 py-1.5 rounded-md border border-slate-200 shadow-sm"></div>
+                </div>
+                
+                <div class="overflow-x-auto overflow-y-auto custom-scrollbar flex-1 relative max-h-[60vh]">
+                    <!-- INI KUNCINYA: id="data-table" diletakkan pada tabel yang berisi thead & tbody -->
+                    <table id="data-table" class="w-full text-left border-collapse whitespace-nowrap min-w-max border-spacing-0">
+                        <thead id="bank-header"></thead>
+                        <tbody id="bank-body" class="text-sm text-slate-700"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // GANTI DENGAN URL DEPLOYMENT GAS ANDA
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyu2coUegPT9j2XMkvVEEFQqwhTq6JaPpr_7lIaUXfddtGg4V-mOQkpr03ZA6louDZo/exec'; 
+        let allBebanData = [];
+        let bebanHeaderRaw = []; // Penampung jam dinamis
+
+        document.getElementById('sidebar-toggle').addEventListener('click', () => {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('w-0');
+            sidebar.classList.toggle('border-r-0');
+        });
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const btnFilter = document.getElementById('filter-btn');
+            btnFilter.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin"></i>`; btnFilter.disabled = true;
+            
+            fetch(GAS_URL, { redirect: 'follow' }).then(res => res.json()).then(data => {
+                allBebanData = data.bebanData || []; 
+                bebanHeaderRaw = data.bebanHeader || [];
+                
+                // Fallback jika API belum terupdate
+                if(bebanHeaderRaw.length === 0) {
+                    bebanHeaderRaw = ["Tanggal", "Nama Mesin"];
+                    for (let i = 1; i <= 48; i++) {
+                        let m = i * 30; let h = Math.floor(m / 60) % 24; let mins = m % 60;
+                        let timeStr = String(h).padStart(2, '0') + ":" + String(mins).padStart(2, '0');
+                        bebanHeaderRaw.push(timeStr === "00:00" ? "24:00" : timeStr);
+                    }
+                }
+                
+                btnFilter.innerHTML = "Tarik Data"; btnFilter.disabled = false;
+            }).catch(err => { alert("Gagal menarik data."); btnFilter.innerHTML = "Error"; });
+        });
+
+        function parseDate(dStr) {
+            let p = dStr.split('-'); return new Date(p[2], p[1]-1, p[0]);
+        }
+
+        document.getElementById('filter-btn').addEventListener('click', () => {
+            let startVal = document.getElementById('start-date').value;
+            let endVal = document.getElementById('end-date').value;
+            
+            if(!startVal || !endVal) return alert("Pilih rentang tanggal!");
+            if(new Date(startVal) > new Date(endVal)) return alert("Tanggal Mulai tidak boleh lebih dari Tanggal Selesai.");
+            
+            let startD = new Date(startVal); startD.setHours(0,0,0,0);
+            let endD = new Date(endVal); endD.setHours(23,59,59,999);
+            
+            let filteredRows = allBebanData.filter(row => {
+                let namaMesin = String(row[1]).toUpperCase().trim();
+                let rowDStr = String(row[0]).replace(/'/g, "").trim();
+                let rowDate = parseDate(rowDStr);
+                return namaMesin === "TOTAL GEN" && rowDate >= startD && rowDate <= endD;
+            });
+            
+            const emptyState = document.getElementById('empty-state');
+            const contentArea = document.getElementById('content-area');
+
+            if(filteredRows.length === 0) {
+                emptyState.classList.remove('hidden'); contentArea.classList.add('hidden');
+                emptyState.innerHTML = `<i class="fa-solid fa-box-open text-6xl text-rose-200 mb-4"></i><p class="text-rose-500 font-bold">Data TOTAL GEN tidak ditemukan pada tanggal tersebut.</p>`;
+                return;
+            }
+
+            emptyState.classList.add('hidden'); contentArea.classList.remove('hidden');
+            contentArea.classList.add('flex');
+
+            document.getElementById('result-info').innerText = `Ditemukan: ${filteredRows.length} Hari`;
+
+            let thead = document.getElementById('bank-header');
+            let tbody = document.getElementById('bank-body');
+            
+            // RENDER HEADER DINAMIS
+            let headerHTML = `<tr><th class="p-3 sticky left-0 top-0 bg-blue-600 text-white z-30 border-r border-blue-700 shadow-[2px_0_5px_-2px_rgba(0,0,0,0.3)] min-w-[120px] font-bold text-center text-xs">TANGGAL</th>`;
+            for (let i = 2; i < bebanHeaderRaw.length; i++) {
+                headerHTML += `<th class="p-2 text-center sticky top-0 bg-blue-600 text-white z-20 border-b border-r border-blue-700/50 text-[11px] min-w-[60px]">${bebanHeaderRaw[i]}</th>`;
+            }
+            headerHTML += `</tr>`;
+
+            // RENDER BODY DINAMIS
+            let bodyHTML = "";
+            filteredRows.forEach(row => {
+                let tanggal = String(row[0]).replace(/'/g, "").trim();
+                bodyHTML += `<tr><td class="p-3 font-bold text-slate-800 text-center sticky left-0 z-20 bg-slate-100 border-r border-slate-300 border-b shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)] whitespace-nowrap">${tanggal}</td>`;
+                
+                // Iterasi mengikuti header dinamis
+                for(let i = 2; i < bebanHeaderRaw.length; i++) {
+                    let val = parseFloat(row[i]);
+                    let txt = (!isNaN(val)) ? val.toFixed(2) : "-";
+                    let txtClass = (!isNaN(val) && val > 0) ? "text-emerald-700 font-bold bg-emerald-50/30" : "text-slate-300 font-medium";
+                    bodyHTML += `<td class="p-2 text-center border-r border-b border-slate-200/60 text-xs ${txtClass}">${txt}</td>`;
+                }
+                bodyHTML += `</tr>`;
+            });
+
+            thead.innerHTML = headerHTML;
+            tbody.innerHTML = bodyHTML;
+        });
+
+        document.getElementById('logout-btn').addEventListener('click', (e) => { e.preventDefault(); localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html'; });
+   // Fungsi menampilkan tombol download setelah data ditarik
+        // Letakkan baris ini di dalam document.getElementById('filter-btn').addEventListener('click', () => {
+        // Tepat di bawah baris: document.getElementById('result-info').innerText = `Ditemukan: ${filteredRows.length} Hari`;
+        document.getElementById('download-btn').classList.remove('hidden');
+
+        // Fungsi Ekspor ke Excel
+        document.getElementById('download-btn').addEventListener('click', () => {
+            let startVal = document.getElementById('start-date').value;
+            let endVal = document.getElementById('end-date').value;
+            
+            // Mengambil elemen tabel HTML
+            let table = document.getElementById('data-table');
+            
+            // Konversi HTML table ke dalam buku kerja Excel
+            let wb = XLSX.utils.table_to_book(table, {sheet: "Histori Total Gen"});
+            
+            // Mengunduh file
+            XLSX.writeFile(wb, `Bank_Data_Total_Gen_${startVal}_to_${endVal}.xlsx`);
+        });
+   </script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visual Load Flow HD - Realtime Opsis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="icon" href="data:,">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        
+        .custom-scrollbar::-webkit-scrollbar { height: 10px; width: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* EFEK HD UNTUK DATA OVERLAY */
+        .flow-badge {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 20px;
+            padding: 3px 8px; /* Dikecilkan sedikit agar muat 2 peta bersandingan */
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        .flow-badge:hover {
+            transform: scale(1.15);
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.15);
+            z-index: 50;
+        }
+
+        .arrow-wrapper {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            mix-blend-mode: multiply; 
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shadow-sm z-10 relative shrink-0">
+        <div>
+            <div class="p-8">
+                <h2 class="text-3xl font-bold text-blue-600 tracking-tight">PLN<span class="text-yellow-400">.</span></h2>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Realtime Opsis 1</p>
+            </div>
+            <nav class="px-4 space-y-2 mt-4 overflow-y-auto">
+                <a href="index.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-chart-pie w-6 mr-3"></i>Dashboard
+                </a>
+                <a href="tegangan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-bolt w-6 mr-3"></i>Tegangan
+                </a>
+                <div class="space-y-1 pt-1 mt-4">
+                    <a href="rekap_pembebanan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-network-wired w-6 mr-3"></i>Pembebanan Trafo & Line
+                    </a>
+                    <a href="load_flow.html" class="flex items-center px-4 py-2 ml-4 bg-blue-50 text-blue-600 font-bold rounded-xl transition text-sm shadow-sm border border-blue-100">
+                        <i class="fa-solid fa-map-location-dot w-5 mr-2 text-blue-500"></i>Visual Load Flow
+                    </a>
+                </div>
+            </nav>
+        </div>
+    </aside>
+
+    <!-- KONTEN UTAMA -->
+    <main class="flex-1 relative bg-slate-50 h-screen overflow-y-auto custom-scrollbar flex flex-col">
+        <!-- HEADER -->
+        <div class="bg-white border-b border-slate-200 px-8 py-5 flex justify-between items-center shrink-0 shadow-sm sticky top-0 z-30">
+            <h1 class="text-2xl font-bold text-slate-800 flex items-center">
+                <i class="fa-solid fa-layer-group text-blue-500 mr-3"></i>Interaktif Load Flow
+            </h1>
+            <div class="flex items-center bg-slate-50 border border-slate-200 p-1.5 rounded-xl shadow-sm">
+                <!-- PILIHAN TANGGAL HARIAN -->
+                <input type="date" id="filter-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-100 rounded-lg cursor-pointer">
+                <!-- TOMBOL TAMPILKAN -->
+                <button id="btn-sync" onclick="fetchLoadFlowData()" class="bg-blue-600 hover:bg-blue-700 text-white p-2 px-5 rounded-lg text-sm font-bold transition shadow-sm ml-2 flex items-center">
+                    Tampilkan Data
+                </button>
+            </div>
+        </div>
+
+        <!-- AREA PETA HD (KEMBALI KE 2 KOLOM SIANG & MALAM) -->
+        <div class="p-8 flex-1">
+            
+            <!-- Loading Indicator (Disembunyikan saat normal) -->
+            <div id="loading-indicator" class="fixed top-24 left-1/2 transform -translate-x-1/2 z-50 bg-white/95 px-6 py-3 rounded-xl shadow-lg border border-slate-200 font-bold text-blue-600 hidden items-center">
+                <i class="fa-solid fa-circle-notch fa-spin mr-3"></i> Menarik data dari Spreadsheet...
+            </div>
+
+            <div class="grid grid-cols-1 xl:grid-cols-2 gap-8 h-full">
+                
+                <!-- CARD PETA SIANG (14:00) -->
+                <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
+                    <div class="bg-gradient-to-r from-amber-50 to-white border-b border-amber-100 px-6 py-4 flex justify-between items-center">
+                        <h2 class="font-bold text-amber-700 flex items-center text-lg"><i class="fa-solid fa-sun mr-2"></i>Load Flow Siang</h2>
+                        <span class="bg-amber-100 text-amber-800 font-black px-4 py-1.5 rounded-xl text-sm tracking-widest shadow-sm">14:00 WITA</span>
+                    </div>
+                    
+                    <div class="p-4 bg-[#eef2f6] flex-1 flex items-center justify-center min-h-[500px] overflow-hidden">
+                        <div class="relative w-full max-w-[95%] mx-auto flex justify-center items-center">
+                            <div class="relative inline-block w-full">
+                                <img src="load_flow_1.png" alt="Peta Lombok Siang" class="w-full h-auto block drop-shadow-2xl mix-blend-multiply mx-auto">
+
+                                <!-- KUMPULAN OVERLAY SIANG (Diawali prefix "siang-") -->
+                                <div class="absolute" style="top: 77%; left: 22%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-jeranjang-sekotong"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 79%; left: 38%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-sengkol-jeranjang"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 66%; left: 38%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-jeranjang-mantang"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 85%; left: 51%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-sengkol-kuta"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 68%; left: 48%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-sengkol-mantang"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 75%; left: 60%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-paokmotong-sengkol"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 52%; left: 72%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-pringgabaya-paokmotong"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 37%; left: 79%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-sambelia-pringgabaya"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 29%; left: 91%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-sambelia-led"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 8%; left: 70%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-bayan-sambelia"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 12%; left: 46%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-tanjung-bayan"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 27%; left: 32%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-switching-tanjung"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 34%; left: 40%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-switching-mataram"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 41%; left: 24%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-peaker-switching"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 49%; left: 37%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-ampenan-peaker"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 59%; left: 30%; transform: translate(-50%, -50%);"><div class="flow-badge" id="siang-jalur-ampenan-jeranjang"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- CARD PETA MALAM (19:00) -->
+                <div class="bg-white border border-slate-200 rounded-3xl shadow-sm overflow-hidden flex flex-col">
+                    <div class="bg-gradient-to-r from-indigo-50 to-white border-b border-indigo-100 px-6 py-4 flex justify-between items-center">
+                        <h2 class="font-bold text-indigo-700 flex items-center text-lg"><i class="fa-solid fa-moon mr-2"></i>Load Flow Malam</h2>
+                        <span class="bg-indigo-100 text-indigo-800 font-black px-4 py-1.5 rounded-xl text-sm tracking-widest shadow-sm">19:00 WITA</span>
+                    </div>
+                    
+                    <div class="p-4 bg-[#eef2f6] flex-1 flex items-center justify-center min-h-[500px] overflow-hidden">
+                        <div class="relative w-full max-w-[95%] mx-auto flex justify-center items-center">
+                            <div class="relative inline-block w-full">
+                                <img src="load_flow_1.png" alt="Peta Lombok Malam" class="w-full h-auto block drop-shadow-2xl mix-blend-multiply mx-auto">
+
+                                <!-- KUMPULAN OVERLAY MALAM (Diawali prefix "malam-") -->
+                                <div class="absolute" style="top: 77%; left: 22%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-jeranjang-sekotong"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 79%; left: 38%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-sengkol-jeranjang"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 66%; left: 38%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-jeranjang-mantang"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 85%; left: 51%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-sengkol-kuta"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 68%; left: 48%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-sengkol-mantang"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 75%; left: 60%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-paokmotong-sengkol"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 52%; left: 72%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-pringgabaya-paokmotong"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 37%; left: 79%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-sambelia-pringgabaya"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 29%; left: 91%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-sambelia-led"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 8%; left: 70%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-bayan-sambelia"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 12%; left: 46%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-tanjung-bayan"><span class="font-black text-[10px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 27%; left: 32%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-switching-tanjung"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 34%; left: 40%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-switching-mataram"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 41%; left: 24%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-peaker-switching"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 49%; left: 37%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-ampenan-peaker"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                                <div class="absolute" style="top: 59%; left: 30%; transform: translate(-50%, -50%);"><div class="flow-badge" id="malam-jalur-ampenan-jeranjang"><span class="font-black text-[12px] val-text">0.00</span><div class="arrow-wrapper"><img src="viaductk-arrow-6027.gif" class="w-4 h-4 val-icon object-contain"></div></div></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // 1. SET TANGGAL HARI INI SEBAGAI DEFAULT
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('filter-date');
+            const today = new Date();
+            const yyyy = today.getFullYear();
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
+            const dd = String(today.getDate()).padStart(2, '0');
+            dateInput.value = `${yyyy}-${mm}-${dd}`;
+        });
+
+        // 2. KONFIGURASI SUDUT DASAR (Berlaku untuk Siang dan Malam)
+        const lineConfig = {
+            'jalur-ampenan-jeranjang': { baseAngle: -110 },
+            'jalur-ampenan-peaker': { baseAngle: 10 },
+            'jalur-peaker-switching': { baseAngle: -140 },
+            'jalur-switching-mataram': { baseAngle: -15 },
+            'jalur-switching-tanjung': { baseAngle: 100 },
+            'jalur-tanjung-bayan': { baseAngle: 90},
+            'jalur-bayan-sambelia': { baseAngle: 160 },
+            'jalur-sambelia-led': { baseAngle: 25 },
+            'jalur-sambelia-pringgabaya': { baseAngle: 80 },
+            'jalur-pringgabaya-paokmotong': { baseAngle: 90 },
+            'jalur-paokmotong-sengkol': { baseAngle: 90 },
+            'jalur-sengkol-mantang': { baseAngle: -90 },
+            'jalur-sengkol-kuta': { baseAngle: -129 },
+            'jalur-sengkol-jeranjang': { baseAngle: -10 },
+            'jalur-jeranjang-sekotong': { baseAngle: -60 },
+            'jalur-jeranjang-mantang': { baseAngle: -90 }
+        };
+
+        // 3. FUNGSI UPDATE UI UNTUK SIANG / MALAM
+        // period = 'siang' atau 'malam'
+        function updateLoadFlowData(period, baseId, mwValue) {
+            const elementId = `${period}-${baseId}`;
+            const badge = document.getElementById(elementId);
+            if (!badge) return;
+
+            const textEl = badge.querySelector('.val-text');
+            const iconEl = badge.querySelector('.val-icon');
+            
+            // Ambil config sudut menggunakan baseId (tanpa prefix siang/malam)
+            const config = lineConfig[baseId];
+
+            const totalMW = parseFloat(mwValue) || 0;
+            textEl.textContent = Math.abs(totalMW).toFixed(2);
+
+            let finalAngle = config.baseAngle;
+            
+            // LOGIKA WARNA (Sama untuk Siang dan Malam)
+            if (totalMW < 0) {
+                finalAngle += 180;
+                textEl.classList.remove('text-slate-800', 'text-blue-600');
+                textEl.classList.add('text-rose-600');
+            } else {
+                textEl.classList.remove('text-slate-800', 'text-rose-600');
+                textEl.classList.add('text-blue-600');
+            }
+
+            iconEl.parentElement.style.transform = `rotate(${finalAngle}deg)`;
+        }
+
+        // 4. FUNGSI TARIK DATA DARI GOOGLE SHEETS
+        async function fetchLoadFlowData() {
+            const dateVal = document.getElementById('filter-date').value;
+            if(!dateVal) {
+                alert("Mohon pilih tanggal terlebih dahulu!");
+                return;
+            }
+
+            const loader = document.getElementById('loading-indicator');
+            loader.style.display = 'flex';
+
+            // KAMUS PENERJEMAH DARI NAMA SPREADSHEET (GI_LINE) KE ID HTML
+            // Berdasarkan gambar spreadsheet yang Anda kirim
+            const mappingJalur = {
+                'GIS PEAKER_LINE AMPENAN 1': 'jalur-ampenan-peaker',
+                'GIS PEAKER_LINE AMPENAN 2': 'jalur-ampenan-peaker',
+                'GIS PEAKER_LINE SWITCHING 1': 'jalur-peaker-switching',
+                'GIS PEAKER_LINE SWITCHING 2': 'jalur-peaker-switching',
+                'GI SWITCHING_LINE MATARAM 1': 'jalur-switching-mataram',
+                'GI SWITCHING_LINE MATARAM 2': 'jalur-switching-mataram',
+                'GI TANJUNG_LINE SWITCHING 1': 'jalur-switching-tanjung',
+                'GI TANJUNG_LINE SWITCHING 2': 'jalur-switching-tanjung',
+                'GI BAYAN_LINE TANJUNG 1': 'jalur-tanjung-bayan',
+                'GI BAYAN_LINE TANJUNG 2': 'jalur-tanjung-bayan',
+                'GI SAMBELIA_LINE BAYAN 1': 'jalur-bayan-sambelia',
+                'GI SAMBELIA_LINE BAYAN 2': 'jalur-bayan-sambelia',
+                'GI SAMBELIA_LINE LOTIM 1': 'jalur-sambelia-led',
+                'GI SAMBELIA_LINE LOTIM 2': 'jalur-sambelia-led',
+                'GI SAMBELIA_LINE PRINGGABAYA 1': 'jalur-sambelia-pringgabaya',
+                'GI SAMBELIA_LINE PRINGGABAYA 2': 'jalur-sambelia-pringgabaya',   
+                'GI PRINGGABAYA_LINE PAOKMOTONG 1': 'jalur-pringgabaya-paokmotong',
+                'GI PRINGGABAYA_LINE PAOKMOTONG 2': 'jalur-pringgabaya-paokmotong',                             
+                'GI TANJUNG_LINE SWITCHING 2': 'jalur-switching-tanjung',
+                'GI TANJUNG_LINE SWITCHING 2': 'jalur-switching-tanjung',
+                'GI AMPENAN_LINE JERANJANG 1': 'jalur-ampenan-jeranjang',
+                'GI AMPENAN_LINE JERANJANG 2': 'jalur-ampenan-jeranjang',
+                'GI JERANJANG_LINE SENGKOL': 'jalur-sengkol-jeranjang',
+                'GI JERANJANG_LINE MANTANG': 'jalur-jeranjang-mantang', // Jika Anda membuat jalurnya di peta
+                'GI SEKOTONG_LINE JERANJANG 1': 'jalur-jeranjang-sekotong',
+                'GI SEKOTONG_LINE JERANJANG 2': 'jalur-jeranjang-sekotong',
+                'GI SENGKOL_LINE MANTANG': 'jalur-sengkol-mantang',
+                'GI PAOKMOTONG_LINE SENGKOL 1': 'jalur-paokmotong-sengkol',
+                'GI PAOKMOTONG_LINE SENGKOL 2': 'jalur-paokmotong-sengkol',
+                'GI KUTA_LINE SENGKOL 1': 'jalur-sengkol-kuta',
+                'GI KUTA_LINE SENGKOL 2': 'jalur-sengkol-kuta'
+                
+                // TUGAS ANDA: Tambahkan nama-nama GI dan Line lain yang ada di Spreadsheet Anda ke daftar ini
+            };
+
+            // GANTI DENGAN URL APPS SCRIPT ANDA
+            const API_URL = `https://script.google.com/macros/s/AKfycbyu2coUegPT9j2XMkvVEEFQqwhTq6JaPpr_7lIaUXfddtGg4V-mOQkpr03ZA6louDZo/exec?action=load_flow&tanggal=${dateVal}`;
+
+            try {
+                const response = await fetch(API_URL);
+                if (!response.ok) throw new Error('Jaringan bermasalah atau URL salah');
+                const data = await response.json(); 
+
+                // Fungsi Pintar untuk menjumlahkan Line 1 & Line 2 lalu merender ke UI
+                function renderData(period, sheetData) {
+                    if (!sheetData || Object.keys(sheetData).length === 0) return;
+                    
+                    let totalPerJalur = {};
+
+                    for (const [rawName, mwValue] of Object.entries(sheetData)) {
+                        const htmlId = mappingJalur[rawName]; 
+                        
+                        if (htmlId) {
+                            if (!totalPerJalur[htmlId]) totalPerJalur[htmlId] = 0;
+                            
+                            // PERBAIKAN ANGKA: Bersihkan spasi dan ubah koma menjadi titik
+                            let cleanString = String(mwValue).replace(/\s/g, '').replace(',', '.');
+                            
+                            // Ubah menjadi angka, jika error/kosong jadikan 0
+                            const val = parseFloat(cleanString) || 0;
+                            
+                            // JUMLAHKAN OTOMATIS
+                            totalPerJalur[htmlId] += val;
+                        }
+                    }
+
+                    // Tembakkan hasil penjumlahan final ke Peta UI
+                    for (const [htmlId, totalMW] of Object.entries(totalPerJalur)) {
+                        updateLoadFlowData(period, htmlId, totalMW);
+                    }
+                }
+
+                // Render Peta Siang dan Malam
+                renderData('siang', data.siang);
+                renderData('malam', data.malam);
+
+                loader.style.display = 'none'; 
+            } catch (error) {
+                console.error('Gagal menarik data:', error);
+                alert("Gagal sinkronisasi data. Periksa URL Apps Script Anda.");
+                loader.style.display = 'none';
+            }
+        }
+
+        // Jalankan saat pertama kali dibuka
+        window.addEventListener('DOMContentLoaded', () => {
+            setTimeout(fetchLoadFlowData, 200); 
+        });
+
+    </script>
+</body>
+</html>
