@@ -1,0 +1,60 @@
+name: Protect internal HTML pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  protect-pages:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Add session authentication guard
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          guard = '''\n    <script>\n        // AUTH GUARD: Halaman internal hanya dapat diakses setelah login.\n        if (sessionStorage.getItem("isLoggedIn") !== "true") {\n            window.location.href = "login.html";\n        }\n    </script>\n'''
+
+          for path in sorted(Path('.').glob('*.html')):
+              if path.name == 'login.html':
+                  continue
+
+              text = path.read_text(encoding='utf-8')
+              original = text
+
+              # Hindari guard ganda jika halaman sudah terlindungi.
+              if 'AUTH GUARD: Halaman internal' not in text and 'sessionStorage.getItem("isLoggedIn")' not in text and "sessionStorage.getItem('isLoggedIn')" not in text:
+                  match = re.search(r'<body\b[^>]*>', text, flags=re.IGNORECASE)
+                  if match:
+                      text = text[:match.end()] + guard + text[match.end():]
+                  else:
+                      raise SystemExit(f'Tidak menemukan tag <body> pada {path}')
+
+              # Samakan tombol Logout dengan storage yang digunakan login.
+              text = text.replace("localStorage.removeItem('isLoggedIn')", "sessionStorage.removeItem('isLoggedIn')")
+              text = text.replace('localStorage.removeItem("isLoggedIn")', 'sessionStorage.removeItem("isLoggedIn")')
+
+              if text != original:
+                  path.write_text(text, encoding='utf-8')
+                  print(f'Updated: {path}')
+
+      - name: Commit authentication protection changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add '*.html'
+          if git diff --cached --quiet; then
+            echo "No HTML changes needed."
+            exit 0
+          fi
+          git commit -m "Protect internal pages with session login"
+          git push
