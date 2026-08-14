@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frekuensi - Realtime Opsis</title>
+    <!-- Library Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Library SheetJS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="icon" href="data:,">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shadow-sm z-10 relative">
+        <div>
+            <div class="p-8">
+                <h2 class="text-3xl font-bold text-blue-600 tracking-tight">PLN<span class="text-yellow-400">.</span></h2>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Realtime Opsis 1</p>
+            </div>
+            <nav class="px-4 space-y-2 mt-4">
+                <a href="index.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-chart-pie w-6 mr-3"></i>Dashboard
+                </a>
+                <a href="tegangan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-bolt w-6 mr-3"></i>Tegangan
+                </a>
+                <!-- MENU FREKUENSI DENGAN SUB MENU -->
+                <div class="space-y-1">
+                    <a href="frekuensi.html" class="flex items-center px-4 py-3 bg-blue-50 text-blue-600 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-wave-square w-6 mr-3"></i>Summary Frekuensi
+                    </a>
+                    <a href="sebaran.html" class="flex items-center px-4 py-2 ml-4 text-sm text-slate-400 font-medium hover:text-blue-600 transition">
+                        <i class="fa-solid fa-chart-bar w-5 mr-2 opacity-50"></i>Sebaran Frekuensi
+                    </a>
+                </div>
+                    <div class="space-y-1 pt-1">
+                        <a href="beban.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                            <i class="fa-solid fa-industry w-6 mr-3"></i>Load Profile
+                        </a>
+                        <a href="rekap_pembebanan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                            <i class="fa-solid fa-network-wired w-6 mr-3"></i>Pembebanan Trafo dan Line Transmisi
+                        </a>
+                    </div>
+            </nav>
+        </div>
+        <div class="p-6 border-t border-slate-100">
+            <button id="logout-btn" class="flex items-center px-4 py-2 w-full text-rose-500 font-medium hover:bg-rose-50 rounded-xl transition">
+                <i class="fa-solid fa-arrow-right-from-bracket w-6 mr-2"></i>Logout
+            </button>
+        </div>
+    </aside>
+
+    <main class="flex-1 overflow-y-auto p-10 relative bg-slate-50">
+        <div class="max-w-6xl mx-auto">
+            
+            <!-- HEADER & ACTIONS -->
+            <div class="flex flex-col xl:flex-row xl:items-end justify-between mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800 flex items-center">
+                        <!-- Tombol Hamburger Toggle -->
+                <button id="sidebar-toggle" class="mr-5 text-slate-400 hover:text-blue-600 focus:outline-none transition bg-slate-50 hover:bg-blue-50 p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                    <i class="fa-solid fa-bars text-lg"></i>
+                </button>
+                        <i class="fa-solid fa-wave-square text-blue-500 mr-4"></i>Rekapan Frekuensi Sistem
+                    </h1>
+                    <p id="status-msg" class="text-sm text-slate-500 mt-2 font-medium ml-10">Tarik data untuk memantau frekuensi harian.</p>
+                </div>
+                
+                <div class="flex items-center flex-wrap gap-2">
+                    <!-- Date Range Filter -->
+                    <div class="flex items-center bg-white border border-slate-300 p-1.5 rounded-xl shadow-sm">
+                        <input type="date" id="start-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-50 rounded-lg">
+                        <span class="text-slate-300 font-bold px-1">-</span>
+                        <input type="date" id="end-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-50 rounded-lg">
+                        <button id="filter-btn" class="bg-blue-500 hover:bg-blue-600 text-white p-2.5 px-5 rounded-lg text-sm font-bold transition shadow-sm ml-1 disabled:opacity-50">Tampilkan</button>
+                    </div>
+                    
+                    <button id="download-btn" class="hidden bg-emerald-600 hover:bg-emerald-700 text-white p-3 px-5 rounded-xl text-sm font-bold transition shadow-sm flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel"></i> Export Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- TABLE CONTAINER -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden min-h-[400px]">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse whitespace-nowrap">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[10px] tracking-wider font-bold">
+                                <th class="p-4">Tanggal</th>
+                                <th class="p-4 text-rose-500">&lt; 49.5 Hz<br/><span class="text-[9px] font-normal text-slate-400">(Detik)</span></th>
+                                <th class="p-4 text-emerald-500">49.5 - 50.2<br/><span class="text-[9px] font-normal text-slate-400">(Detik)</span></th>
+                                <th class="p-4 text-blue-500">&gt; 50.2 Hz<br/><span class="text-[9px] font-normal text-slate-400">(Detik)</span></th>
+                                <th class="p-4">F Max<br/><span class="text-[9px] font-normal text-slate-400">(Waktu)</span></th>
+                                <th class="p-4">F Min<br/><span class="text-[9px] font-normal text-slate-400">(Waktu)</span></th>
+                                <th class="p-4">Rata-Rata</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="text-sm text-slate-700 divide-y divide-slate-100">
+                            <tr><td colspan="7" class="p-20 text-center text-slate-400 font-medium text-base"><i class="fa-regular fa-calendar-check text-4xl mb-3 block text-blue-100"></i>Silakan pilih rentang tanggal untuk memuat data.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+    <script>
+        // GANTI URL INI JIKA ANDA MELAKUKAN NEW DEPLOYMENT LAGI
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxLkIvtxTzSclnq850j3_vIDaGP8BZ9G96L7rMudJ85trUv7rKsIEyKOXwrQqVpsls4Ew/exec'; 
+        
+        let allFreqData = []; 
+        let filteredDataForExcel = [];
+
+       document.getElementById('sidebar-toggle').addEventListener('click', () => {
+        const sidebar = document.getElementById('sidebar');
+        // Toggle class width menjadi 0
+        sidebar.classList.toggle('w-64');
+        sidebar.classList.toggle('w-0');
+        // Tambahkan border-none saat ditutup agar tidak menyisakan garis
+        sidebar.classList.toggle('border-r-0');
+    });
+
+        // =====================================
+        // HELPER FUNCTIONS (CLEANERS)
+        // =====================================
+        
+        // Membersihkan format "1899" atau "GMT" menjadi jam HH:MM:SS murni
+        function extractTimeOnly(rawStr) {
+            if (!rawStr) return "-";
+            let s = String(rawStr);
+            let timeMatch = s.match(/\d{2}:\d{2}:\d{2}/);
+            if (timeMatch) return timeMatch[0];
+            
+            let timeMatchShort = s.match(/\d{2}:\d{2}/);
+            if (timeMatchShort) return timeMatchShort[0] + ":00";
+
+            return s;
+        }
+
+        // Parsing String DD-MM-YYYY (dari Database) ke Timestamp untuk komparasi angka
+        function parseDBDate(dStr) {
+            if(!dStr) return 0;
+            let cleanStr = dStr.replace(/'/g, "");
+            let p = cleanStr.split('-');
+            if(p.length === 3) return new Date(p[2], p[1]-1, p[0]).getTime();
+            return 0;
+        }
+
+        // Parsing Input Date HTML YYYY-MM-DD ke Timestamp
+        function parseInputDate(dStr) {
+            if(!dStr) return 0;
+            let p = dStr.split('-');
+            if(p.length === 3) return new Date(p[0], p[1]-1, p[2]).getTime();
+            return 0;
+        }
+
+        // =====================================
+        // FETCH DATA AWAL
+        // =====================================
+        window.onload = () => {
+            const filterBtn = document.getElementById('filter-btn');
+            filterBtn.disabled = true;
+
+            fetch(GAS_URL, { redirect: 'follow' })
+                .then(res => res.json())
+                .then(data => { 
+                    allFreqData = data.frekuensiData || []; 
+                    if(allFreqData.length > 0) {
+                        filterBtn.disabled = false;
+                        document.getElementById('status-msg').innerHTML = "Data siap. Silakan tentukan rentang tanggal.";
+                    } else {
+                        document.getElementById('status-msg').innerHTML = "Database kosong.";
+                    }
+                })
+                .catch(err => {
+                    document.getElementById('status-msg').innerHTML = `<span class="text-rose-500">Gagal terhubung ke database.</span>`;
+                });
+        };
+
+        // =====================================
+        // LOGIKA FILTER TANGGAL
+        // =====================================
+        document.getElementById('filter-btn').addEventListener('click', function() {
+            let sDate = document.getElementById('start-date').value;
+            let eDate = document.getElementById('end-date').value;
+            if(!sDate || !eDate) return alert("Pilih kotak rentang tanggal Awal dan Akhir!");
+
+            let startT = parseInputDate(sDate);
+            let endT = parseInputDate(eDate);
+
+            if(startT > endT) return alert("Tanggal Awal tidak boleh melewati Tanggal Akhir!");
+
+            filteredDataForExcel = allFreqData.filter(d => {
+                let t = parseDBDate(d.tanggal);
+                return t >= startT && t <= endT;
+            });
+
+            // Urutkan kronologis dari tanggal terkecil ke terbesar
+            filteredDataForExcel.sort((a,b) => parseDBDate(a.tanggal) - parseDBDate(b.tanggal));
+
+            const tBody = document.getElementById('table-body');
+            tBody.innerHTML = "";
+
+            if(filteredDataForExcel.length === 0) {
+                tBody.innerHTML = `<tr><td colspan="7" class="p-10 text-center text-rose-500 font-medium">Data tidak ditemukan di rentang tanggal tersebut.</td></tr>`;
+                document.getElementById('download-btn').classList.add('hidden');
+                return;
+            }
+
+            // RENDER DATA KE TABEL
+            filteredDataForExcel.forEach(item => {
+                let tgl = String(item.tanggal).replace(/'/g, "");
+                let jamMaxClean = extractTimeOnly(item.jamMax);
+                let jamMinClean = extractTimeOnly(item.jamMin);
+
+                tBody.innerHTML += `
+                    <tr class="hover:bg-slate-50">
+                        <td class="p-4 font-bold text-slate-700">${tgl}</td>
+                        <td class="p-4 text-rose-500 font-semibold">${item.durBawah}</td>
+                        <td class="p-4 text-emerald-600 font-semibold">${item.durNormal}</td>
+                        <td class="p-4 text-blue-600 font-semibold">${item.durAtas}</td>
+                        <td class="p-4 font-bold">${item.max} <span class="text-[10px] text-slate-400 font-normal">(${jamMaxClean})</span></td>
+                        <td class="p-4 font-bold">${item.min} <span class="text-[10px] text-slate-400 font-normal">(${jamMinClean})</span></td>
+                        <td class="p-4 font-bold text-purple-600">${item.avg} Hz</td>
+                    </tr>
+                `;
+            });
+            document.getElementById('download-btn').classList.remove('hidden');
+        });
+
+        // =====================================
+        // EXPORT EXCEL (FORMAT HORIZONTAL)
+        // =====================================
+        document.getElementById('download-btn').addEventListener('click', function() {
+            if(filteredDataForExcel.length === 0) return;
+
+            let excelData = [];
+            // Header Persis PLN
+            excelData.push(["Tanggal", "< 49.5 Hz", "49.51- 50.2 Hz", "> 50.20 Hz", "Total", "> 50.20 Hz", "F max (Hz)", "WAKTU", "F min (Hz)", "WAKTU", "F rata2 (Hz)", "Frekuensi > 50.20 Hz"]);
+
+            filteredDataForExcel.forEach(d => {
+                let over = parseInt(d.durAtas) || 0;
+                let total = parseInt(d.total) || 1;
+                let pctOver = (over / total); 
+                
+                let jamMaxClean = extractTimeOnly(d.jamMax);
+                let jamMinClean = extractTimeOnly(d.jamMin);
+
+                excelData.push([
+                    String(d.tanggal).replace(/'/g, ""),
+                    parseInt(d.durBawah) || 0,
+                    parseInt(d.durNormal) || 0,
+                    over,
+                    total,
+                    over, 
+                    parseFloat(d.max),
+                    jamMaxClean,
+                    parseFloat(d.min),
+                    jamMinClean,
+                    parseFloat(d.avg),
+                    pctOver 
+                ]);
+            });
+
+            const ws = XLSX.utils.aoa_to_sheet(excelData);
+            
+            // Format kolom L (index 11) menjadi persen %
+            const range = XLSX.utils.decode_range(ws['!ref']);
+            for(let R = 1; R <= range.e.r; ++R) {
+                let cell = ws[XLSX.utils.encode_cell({r: R, c: 11})];
+                if(cell) cell.z = "0.00%";
+            }
+
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, "Laporan Freq");
+            
+            // Nama File Dinamis
+            let sParts = document.getElementById('start-date').value.split('-'); 
+            let dispStart = `${sParts[2]}-${sParts[1]}-${sParts[0]}`;
+            let eParts = document.getElementById('end-date').value.split('-'); 
+            let dispEnd = `${eParts[2]}-${eParts[1]}-${eParts[0]}`;
+            let fileName = dispStart === dispEnd ? `Laporan_Frekuensi_${dispStart}.xlsx` : `Laporan_Frekuensi_${dispStart}_sd_${dispEnd}.xlsx`;
+            
+            XLSX.writeFile(wb, fileName);
+        });
+
+        // Logout
+        document.getElementById('logout-btn').addEventListener('click', (e) => {
+            e.preventDefault(); localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html';
+        });
+    </script>
+</body>
+</html>

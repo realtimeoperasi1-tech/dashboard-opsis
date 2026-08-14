@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Realtime Opsis</title>
+    <!-- Library Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library FontAwesome (Ikon) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Library SheetJS (Untuk membaca file Excel) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="icon" href="data:,">
+    <!-- Library Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library Chart.js (BARU DITAMBAHKAN) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shadow-sm z-10 relative">
+        <div>
+            <div class="p-8">
+                <h2 class="text-3xl font-bold text-blue-600 tracking-tight">PLN<span class="text-yellow-400">.</span></h2>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Realtime Opsis 1</p>
+            </div>
+            
+            <nav class="px-4 space-y-2 mt-4">
+                <a href="index.html" class="flex items-center px-4 py-3 bg-blue-50 text-blue-600 font-semibold rounded-xl transition">
+                    <i class="fa-solid fa-chart-pie w-6 mr-3"></i>Dashboard
+                </a>
+                <a href="tegangan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-bolt w-6 mr-3"></i>Tegangan
+                </a>
+                <!-- MENU FREKUENSI DENGAN SUB MENU -->
+                <div class="space-y-1">
+                    <a href="frekuensi.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-wave-square w-6 mr-3"></i>Summary Frekuensi
+                    </a>
+                </div>
+                <div class="space-y-1 pt-1">
+                        <a href="beban.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                            <i class="fa-solid fa-industry w-6 mr-3"></i>Load Profile
+                        </a>
+                    </div>
+                    <a href="rekap_pembebanan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-network-wired w-6 mr-3"></i>Pembebanan Trafo & Line
+                        </a>
+            </nav>
+        </div>
+
+        <div class="p-6 border-t border-slate-100">
+            <button id="logout-btn" class="flex items-center px-4 py-2 w-full text-rose-500 font-medium hover:bg-rose-50 rounded-xl transition">
+                <i class="fa-solid fa-arrow-right-from-bracket w-6 mr-2"></i>Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- KONTEN UTAMA -->
+    <main class="flex-1 overflow-y-auto p-10 relative bg-slate-50">
+        
+        <div class="text-center mt-6 mb-12">
+            <h1 class="text-4xl font-light text-slate-700">Halo, <span class="font-bold text-slate-900">DISPATCHER OPERASI SISTEM 1!</span></h1>
+            <p class="text-sm text-slate-500 mt-3 font-medium">Selamat Datang di Aplikasi Realtime Opsis (V 4.0 Pro)</p>
+            <p class="text-xs text-slate-400 mt-1">Monitoring Application of Realtime Operation</p>
+        </div>
+
+        <!-- CONTAINER KARTU -->
+        <div class="max-w-3xl mx-auto flex flex-col space-y-6 pb-20">
+            
+            <!-- 1. KARTU UPLOAD MASTER LOGSHEET -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-7 shadow-sm">
+                <h3 class="text-lg font-bold text-slate-800 mb-5">
+                    <i class="fa-solid fa-file-excel text-emerald-500 mr-2"></i>Upload Master Logsheet
+                </h3>
+                
+                <div class="flex flex-col space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">1. Pilih Tanggal Logsheet</label>
+                        <input type="date" id="logsheet-date" class="block w-full max-w-sm text-sm text-slate-700 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-blue-500 outline-none shadow-sm cursor-pointer" />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">2. Pilih File Excel (.xlsx)</label>
+                        <div class="flex items-center space-x-4">
+                            <input type="file" id="file-input" accept=".xlsx, .xls" class="block w-full text-sm text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 cursor-pointer border border-slate-300 rounded-lg p-1"/>
+                            <button id="process-btn" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2.5 px-6 rounded-lg transition whitespace-nowrap shadow-sm shadow-emerald-500/30">
+                                Process Data
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <p id="upload-status" class="text-xs text-slate-400 mt-4 font-medium hidden"></p>
+            </div>
+
+            <!-- KARTU GRAFIK LOAD PROFILE (BARU & BERSIH) -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-6 border-b border-slate-100">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-chart-area text-blue-500 mr-3"></i>Grafik Beban (Total Gen)
+                    </h2>
+                    <div class="mt-4 sm:mt-0 bg-slate-50 border border-slate-200 p-1.5 rounded-xl shadow-sm flex items-center">
+                        <input type="date" id="chart-date-picker" class="text-sm text-slate-700 p-2 outline-none bg-transparent font-medium hover:bg-slate-100 rounded-lg cursor-pointer">
+                    </div>
+                </div>
+                
+                <!-- WADAH CHECKBOX PERBANDINGAN H-1 s/d H-7 -->
+                <div id="compare-checkboxes-container" class="flex flex-wrap gap-2 items-center px-6 py-3 bg-slate-50 border-b border-slate-100">
+                    <!-- Javascript akan merender checkbox di sini -->
+                </div>
+
+                <!-- WADAH GRAFIK -->
+                <div class="p-6">
+                    <div id="chart-beban" class="w-full h-[400px]"></div>
+                </div>
+
+                <!-- BEBAN PUNCAK MINGGUAN -->
+                <div id="weekly-peak-info" class="hidden bg-blue-50/50 p-4 border-t border-blue-100 flex flex-col sm:flex-row justify-between items-start sm:items-center">
+                    <div class="text-sm font-bold text-blue-700 flex items-center">
+                        <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>Beban Puncak 7 Hari Terakhir
+                    </div>
+                    <div id="weekly-peak-value" class="flex items-baseline bg-white px-4 py-1.5 rounded-lg border border-blue-200 shadow-sm mt-3 sm:mt-0">
+                        <!-- JS akan mengisi ini -->
+                    </div>
+                </div>
+            </div>
+                </div>
+                </div>
+            </div>
+            
+            <!-- 2. KARTU TEGANGAN -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-7 shadow-sm">
+                <h3 class="text-lg font-bold text-slate-800 mb-2">
+                    <i class="fa-solid fa-bolt text-yellow-500 mr-2"></i>150kV Voltage Summary
+                </h3>
+                <div id="voltage-summary-content" class="text-slate-500 text-sm mt-4">
+                    <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Mengambil data...
+                </div>
+            </div>
+
+            <!-- 3. KARTU FREKUENSI -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-7 shadow-sm">
+                <h3 class="text-lg font-bold text-slate-800 mb-2">
+                    <i class="fa-solid fa-wave-square text-blue-500 mr-2"></i>System Frequency Summary
+                </h3>
+                <div id="frequency-summary-content" class="text-slate-500 text-sm mt-4">
+                    <i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Mengambil data...
+                </div>
+            </div>
+
+        </div>
+    </main>
+
+<!-- SCRIPT LOGIKA DASHBOARD -->
+    <script>
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxLkIvtxTzSclnq850j3_vIDaGP8BZ9G96L7rMudJ85trUv7rKsIEyKOXwrQqVpsls4Ew/exec'; 
+
+        // ==========================================
+        // VARIABEL GLOBAL & HELPER
+        // ==========================================
+        let dashboardBebanData = []; 
+        let bebanHeaderRaw = []; 
+        let bebanChartInstance = null; 
+        let dashboardRencanaData = [];
+
+        // ==========================================
+        // KAMUS TARIF DEFAULT (Bisa Anda tambah/ubah sendiri)
+        // Pastikan ejaan namanya SAMA PERSIS dengan di Excel
+        // ==========================================
+        const tarifDefault = {
+            "PENGGA": 10.0,
+            "NARMADA": 10.0,
+            "SANTONG": 10.0,
+            "KUMBI SEDAU": 852.8,
+            "KUKUSAN": 956.25,
+            "SESAOT": 1062.5,
+            "K. PUTIH": 1062.5,
+            "CAKRA": 1062.5,
+            "PLTMH SEGARA": 1062.5,
+            "KARANG BAYAN": 1343.75,
+            "BATU BEDIL": 1343.75,
+            "INC PLTS SAMBELIA": 1885.39,
+            "INC PLTS SENGKOL": 1945.72,
+            "INC PLTS PRINGGABAYA": 1960.44,
+            "INC PLTS PAOKMOTONG": 1997.8,
+            "PLTU LED #1": 819.23,
+            "PLTU LED #2": 819.23,
+            "PLTU JERANJANG #3": 922.41,
+            "PLTU JERANJANG #1": 930.41,
+            "PLTU JERANJANG #2": 1194.59,
+            "PLTMGU LOMBOK PEAKER (GAS)": 1950.23,
+            "PLTD AMPENAN #5": 3284.24,
+            "PLTD AMPENAN #8": 3286.5,
+            "PLTD AMPENAN #7": 3288.37,
+            "PLTD AMPENAN #3": 3416.17,
+            "PLTD AMPENAN #2": 3440.6,
+            "PLTD PAOKMOTONG #2": 3524.01,
+            "PLTD PAOKMOTONG #4": 3586.09,
+            "PLTD PAOKMOTONG #3": 3692.08,
+            "PLTD SW IPS PRINGGABAYA": 3823.26,
+            "LOMBOK PEAKER-TRAFO 1": 4434.79,
+            "LOMBOK PEAKER-TRAFO 2": 4434.79,
+            "PLTD AMPENAN #5 (B50)": 5018.65,
+            "PLTD AMPENAN #4": 5179.23,
+            "PLTD SW BATAM AMPENAN": 5487.16,
+            "PLTD SW BATAM JERANJANG": 5657.91,
+            "PLTD SW PLN ND AMPENAN": 5670.72,
+            "PLTD SW IPS JERANJANG": 5720.3,
+            "PLTD SW IPS AMPENAN": 5740.66,
+            "PLTD SW NPS PAOKMOTONG": 5821.84,
+            "PLTD AMPENAN #7 (B50)": 5846.93,
+            "PLTD SW PLN ND JERANJANG 1": 5864.88,
+            "PLTD SW PLN ND JERANJANG 2": 5867.89,
+            "PLTD SW IPS SAMBELIA 1": 5911.16,
+            "PLTG MPP 1 JERANJANG": 5936.94,
+            "PLTG MPP 2 JERANJANG": 5936.94,
+            "PLTD AMPENAN #3 (B50)": 5948.95,
+            "PLTD SW IPS SAMBELIA 2": 6003.44,
+            "PLTD AMPENAN #2 (B50)": 8489.43,
+            "PLTD AMPENAN #8 (B50)": 9954.57,
+            "PLTD TAMAN #5": 6136.45,
+            "PLTD TAMAN #4": 6743.36,
+            "PLTD TAMAN #3": 6879.67,
+            "PLTD TAMAN #1": 6971.5,
+            // Tambahkan nama pembangkit lain di bawah ini jika diperlukan...
+        };
+
+        function formatExcelTime(excelTime) {
+            if (typeof excelTime === 'string') return excelTime; 
+            if (typeof excelTime === 'number') {
+                let totalSeconds = Math.round(excelTime * 86400);
+                let h = Math.floor(totalSeconds / 3600);
+                let m = Math.floor((totalSeconds % 3600) / 60);
+                let s = totalSeconds % 60;
+                return String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+            }
+            return "-";
+        }
+
+        function cleanDateStr(dStr) {
+            if (!dStr) return "";
+            if (dStr.includes("GMT") || dStr.includes("T00:00")) {
+                let d = new Date(dStr); return String(d.getDate()).padStart(2, '0') + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + d.getFullYear();
+            }
+            return dStr.replace(/'/g, ""); 
+        }
+
+        function extractTimeOnly(rawStr) {
+            if (!rawStr) return "";
+            let s = String(rawStr);
+            let timeMatch = s.match(/\d{2}:\d{2}:\d{2}/);
+            if (timeMatch) return timeMatch[0];
+            let timeMatchShort = s.match(/\d{2}:\d{2}/);
+            if (timeMatchShort) return timeMatchShort[0] + ":00";
+            return s;
+        }
+        
+
+        // ==========================================
+        // FUNGSI GRAFIK & BEBAN PUNCAK
+        // ==========================================
+        function updateWeeklyPeak(targetDateStr) {
+            let p = targetDateStr.split('-'); 
+            let targetDate = new Date(p[2], p[1]-1, p[0]); 
+            
+            let maxLoad = -Infinity;
+            let maxTime = "";
+            let maxDateInfo = "";
+
+            dashboardBebanData.forEach(row => {
+                let rowDateStr = String(row[0]).replace(/'/g, "").trim();
+                let rp = rowDateStr.split('-');
+                let rowDate = new Date(rp[2], rp[1]-1, rp[0]);
+                
+                let diffTime = targetDate.getTime() - rowDate.getTime();
+                let diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+                
+                if (String(row[1]).toUpperCase().trim() === "TOTAL GEN" && diffDays >= 0 && diffDays <= 7) {
+                    for(let i = 2; i < row.length; i++) {
+                        let val = parseFloat(row[i]);
+                        if(!isNaN(val) && val > maxLoad) {
+                            maxLoad = val;
+                            maxDateInfo = rowDateStr;
+                            maxTime = bebanHeaderRaw[i] ? bebanHeaderRaw[i] : ""; 
+                        }
+                    }
+                }
+            });
+
+            const peakContainer = document.getElementById('weekly-peak-info');
+            const peakValue = document.getElementById('weekly-peak-value');
+            
+            if (maxLoad !== -Infinity && peakContainer && peakValue) {
+                peakContainer.classList.remove('hidden');
+                peakContainer.classList.add('flex');
+                peakValue.innerHTML = `<span class="text-blue-700 font-black text-lg tracking-tight">${maxLoad.toFixed(2)} MW</span> <span class="text-[11px] text-slate-500 font-semibold ml-2.5 tracking-wider">(${maxDateInfo} <i class="fa-regular fa-clock mx-1"></i> ${maxTime})</span>`;
+            } else if (peakContainer) {
+                peakContainer.classList.add('hidden');
+                peakContainer.classList.remove('flex');
+            }
+        }
+
+        function generateCompareCheckboxes(selectedDateStr) {
+            let container = document.getElementById('compare-checkboxes-container');
+            if (!container) return;
+
+            let dateObj = new Date(selectedDateStr);
+            let html = '<span class="text-slate-500 font-bold mr-3 text-sm"><i class="fa-solid fa-code-compare mr-1.5"></i>Bandingkan:</span>';
+
+            // --- TAMBAHAN: CHECKBOX RENCANA (ROH) ---
+            html += `
+                <label class="inline-flex items-center cursor-pointer bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-red-50 transition shadow-sm mr-2 mb-2 sm:mb-0">
+                    <input type="checkbox" id="cb-rencana" value="${selectedDateStr}" class="w-4 h-4 text-red-600 rounded border-slate-300 focus:ring-red-500" onchange="renderBebanChart()">
+                    <span class="ml-2 text-xs font-bold text-slate-600">Rencana (ROH)</span>
+                </label>
+            `;
+
+            // --- CHECKBOX H-1 s/d H-7 ---
+            for (let i = 1; i <= 7; i++) {
+                let pastDate = new Date(dateObj);
+                pastDate.setDate(pastDate.getDate() - i);
+                
+                let d = String(pastDate.getDate()).padStart(2, '0');
+                let m = String(pastDate.getMonth() + 1).padStart(2, '0');
+                let y = pastDate.getFullYear();
+                let targetPastStr = `${d}-${m}-${y}`; 
+
+                html += `
+                    <label class="inline-flex items-center cursor-pointer bg-white border border-slate-200 px-3 py-1.5 rounded-lg hover:bg-blue-50 transition shadow-sm mr-2 mb-2 sm:mb-0">
+                        <input type="checkbox" id="cb-h${i}" value="${targetPastStr}" class="w-4 h-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500" onchange="renderBebanChart()">
+                        <span class="ml-2 text-xs font-bold text-slate-600">H-${i}</span>
+                    </label>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function renderBebanChart() {
+            let dateInput = document.getElementById('chart-date-picker').value; 
+            if (!dateInput) return;
+
+            let targetStr = dateInput.split('-').reverse().join('-');
+            
+            // X-AXIS: Ambil jam dari index ke-2
+            let categoriesX = bebanHeaderRaw.length > 2 ? bebanHeaderRaw.slice(2) : [];
+            let seriesData = [];
+
+            // A. DATA UTAMA (REALISASI / TOTAL GEN)
+            let mainRow = dashboardBebanData.find(row => String(row[0]).replace(/'/g, "").trim() === targetStr && String(row[1]).toUpperCase().trim() === "TOTAL GEN");
+            let mainData = mainRow ? mainRow.slice(2).map(v => parseFloat(v) || 0) : [];
+            
+            seriesData.push({
+                name: "Utama (" + targetStr + ")",
+                data: mainData
+            });
+
+            // B. DATA RENCANA (ROH) - CEK JIKA DICENTANG
+            let cbRencana = document.getElementById('cb-rencana');
+            // Pastikan variabel dashboardRencanaData tersedia (diisi saat narik data dari server)
+            if (cbRencana && cbRencana.checked && typeof dashboardRencanaData !== 'undefined') {
+            let rencanaRow = dashboardRencanaData.find(row => String(row[0]).replace(/'/g, "").trim() === targetStr && String(row[1]).trim().toUpperCase() === "TOTAL GEN");
+                
+            let rencanaData = rencanaRow ? rencanaRow.slice(2).map(v => parseFloat(v) || 0) : [];
+            seriesData.push({ name: "Rencana (ROH)", data: rencanaData });
+            }
+
+            // C. DATA PERBANDINGAN H-1 s/d H-7
+            for (let i = 1; i <= 7; i++) {
+                let cb = document.getElementById(`cb-h${i}`);
+                if (cb && cb.checked) {
+                    let hDateStr = cb.value;
+                    let compareRow = dashboardBebanData.find(row => String(row[0]).replace(/'/g, "").trim() === hDateStr && String(row[1]).toUpperCase().trim() === "TOTAL GEN");
+                    let compareData = compareRow ? compareRow.slice(2).map(v => parseFloat(v) || 0) : [];
+                    
+                    seriesData.push({
+                        name: `H-${i} (${hDateStr})`,
+                        data: compareData
+                    });
+                }
+            }
+
+            let options = {
+                series: seriesData,
+                chart: { type: 'line', height: 400, toolbar: { show: true }, fontFamily: 'Inter, sans-serif' },
+                dataLabels: { enabled: false },
+                stroke: { 
+                    curve: 'smooth', 
+                    // Jika series bernama "Utama...", ketebalannya 3, sisanya 2
+                    width: seriesData.map(s => s.name.includes("Utama") ? 3 : 2), 
+                    // Jika series bernama "Utama...", garis solid (0), sisanya putus-putus (5)
+                    dashArray: seriesData.map(s => s.name.includes("Utama") ? 0 : 5) 
+                },
+                xaxis: { categories: categoriesX, labels: { style: { fontSize: '10px' } }, tickAmount: 15 },
+                // Urutan warna: Ungu (Utama), Merah (Rencana jika dicentang), lalu warna-warni untuk H-x
+                colors: ['#8b5cf6', '#ef4444', '#f97316', '#10b981', '#f59e0b', '#0ea5e9', '#ec4899', '#64748b'],
+                legend: { position: 'top', horizontalAlign: 'right' },
+                tooltip: { y: { formatter: function (val) { return val + " MW" } } }
+            };
+
+            if (bebanChartInstance) { bebanChartInstance.destroy(); }
+            bebanChartInstance = new ApexCharts(document.querySelector("#chart-beban"), options);
+            bebanChartInstance.render();
+            
+            updateWeeklyPeak(targetStr);
+        }
+
+        // ==========================================
+        // PROSES UPLOAD LOGSHEET EXCEL
+        // ==========================================
+        document.getElementById('process-btn').addEventListener('click', function() {
+            const dateInput = document.getElementById('logsheet-date').value;
+            const fileInput = document.getElementById('file-input');
+            const statusText = document.getElementById('upload-status');
+            
+            if (!dateInput) { alert("Silakan pilih Tanggal Logsheet!"); return; }
+            if (fileInput.files.length === 0) { alert("Silakan pilih file Excel terlebih dahulu!"); return; }
+
+            const dParts = dateInput.split('-');
+            const finalTargetDate = `'${dParts[2]}-${dParts[1]}-${dParts[0]}`; 
+
+            this.innerHTML = `<i class="fa-solid fa-circle-notch fa-spin mr-2"></i>Memproses...`;
+            this.disabled = true; this.classList.replace('bg-emerald-500', 'bg-slate-400');
+            statusText.classList.remove('hidden'); statusText.innerHTML = "Mengekstrak data Logsheet...";
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    // 1. PROSES TEGANGAN
+                    let mappedTegangan = [];
+                    let teganganSheetName = workbook.SheetNames.find(s => s.toUpperCase() === "TEGANGAN");
+                    
+                    if(teganganSheetName) {
+                        const rawDataT = XLSX.utils.sheet_to_json(workbook.Sheets[teganganSheetName], {header: 1, raw: false}); 
+                        let giData = {}; let currentGI = null;
+
+                        rawDataT.forEach(row => {
+                            if (!row || row.length === 0) return;
+                            let foundGI = false;
+                            for (let j = 0; j < 3; j++) {
+                                let cell = String(row[j] || "").trim().toUpperCase();
+                                if ((cell.startsWith("GI ") || cell.startsWith("GIS ")) && cell.length > 3) {
+                                    currentGI = cell; if (!giData[currentGI]) giData[currentGI] = []; foundGI = true; break;
+                                }
+                            }
+                            if (foundGI) return; 
+
+                            let is150kV = false;
+                            for (let j = 0; j < 5; j++) { 
+                                let cell = String(row[j] || "").trim().toUpperCase();
+                                if (cell.includes("150KV") || cell.includes("150 KV")) { is150kV = true; break; }
+                            }
+
+                            if (is150kV && currentGI) {
+                                for (let j = 2; j < row.length; j++) {
+                                    let valStr = String(row[j]).replace(',', '.'); 
+                                    let val = parseFloat(valStr);
+                                    if (!isNaN(val) && val > 0) { 
+                                        let totalMins = (j - 1) * 30; 
+                                        let jamStr = String(Math.floor(totalMins / 60)).padStart(2, '0') + ":" + String(totalMins % 60).padStart(2, '0');
+                                        giData[currentGI].push({ val: val, jam: jamStr });
+                                    }
+                                }
+                            }
+                        });
+
+                        for (let gi in giData) {
+                            let values = giData[gi];
+                            let validValues = values.filter(v => v.val > 100 && v.val < 200);
+                            
+                            if (validValues.length > 0) {
+                                let maxObj = validValues.reduce((prev, curr) => (curr.val > prev.val ? curr : prev));
+                                let minObj = validValues.reduce((prev, curr) => (curr.val < prev.val ? curr : prev));
+                                let avg = validValues.reduce((sum, curr) => sum + curr.val, 0) / validValues.length;
+                                
+                                let countBawah = 0; let countAtas = 0;
+                                validValues.forEach(v => {
+                                    if (v.val < 135) countBawah++;
+                                    if (v.val > 165) countAtas++;
+                                });
+
+                                mappedTegangan.push({
+                                    tanggal: finalTargetDate, nama: gi,
+                                    max: `${maxObj.val.toFixed(2)} (${maxObj.jam})`, 
+                                    min: `${minObj.val.toFixed(2)} (${minObj.jam})`, 
+                                    avg: "'" + avg.toFixed(2), 
+                                    eksBawah: Math.floor(countBawah / 4),
+                                    eksAtas: Math.floor(countAtas / 4)
+                                });
+                            }
+                        }
+                    }
+
+                    // 2. PROSES FREKUENSI 
+                    let mappedFrekuensi = null;
+                    let mappedSebaran = [];
+                    let freqSheetName = workbook.SheetNames.find(s => s.toUpperCase().includes("FREKUENSI"));
+
+                    if (freqSheetName) {
+                        const rawDataF = XLSX.utils.sheet_to_json(workbook.Sheets[freqSheetName], {header: 1, raw: true});
+                        let durBawah = 0, durNormal = 0, durAtas = 0, totalCount = 0;
+                        let fMax = -Infinity, fMin = Infinity, sumF = 0, timeMax = "", timeMin = "";
+
+                        let wIdx = -1, fIdx = -1, startRow = 3;
+                        
+                        for(let r = 0; r < 15; r++) {
+                            if(rawDataF[r]) {
+                                for(let c = 0; c < rawDataF[r].length; c++) {
+                                    let txt = String(rawDataF[r][c]).toUpperCase();
+                                    if(txt === "WAKTU" || txt.includes("WAKTU")) wIdx = c;
+                                    if(txt.includes("FREQ") || txt.includes("HZ")) fIdx = c;
+                                }
+                                if(wIdx !== -1 && fIdx !== -1) { startRow = r + 1; break; }
+                            }
+                        }
+
+                        if (wIdx === -1) wIdx = 1; if (fIdx === -1) fIdx = 3; 
+
+                        mappedSebaran = [finalTargetDate]; 
+                        let freqDistribution = {}; 
+                        for(let f = 4900; f <= 5100; f++) {
+                            freqDistribution[(f / 100).toFixed(2)] = 0; 
+                        }
+                        rawDataF.forEach((row, index) => {
+                            if(!row || index < startRow) return;
+                            let waktu = row[wIdx]; let freqRaw = row[fIdx];
+                            if (freqRaw === undefined || freqRaw === null || freqRaw === "") return;
+                            let freqStr = String(freqRaw).replace(',', '.'); let freq = parseFloat(freqStr);
+                            
+                            if(!isNaN(freq) && freq >= 45.0 && freq <= 55.0) { 
+                                let freqKey = freq.toFixed(2); 
+                                if(freqDistribution.hasOwnProperty(freqKey)) { freqDistribution[freqKey]++; }
+
+                                if (freq < 49.5) { durBawah++; } else if (freq >= 49.5 && freq <= 50.2) { durNormal++; } else if (freq > 50.2) { durAtas++; }
+                                sumF += freq; totalCount++;
+                                if (freq > fMax) { fMax = freq; timeMax = formatExcelTime(waktu); }
+                                if (freq < fMin) { fMin = freq; timeMin = formatExcelTime(waktu); }
+                            }
+                        });
+                        for(let f = 4900; f <= 5100; f++) {
+                            mappedSebaran.push(freqDistribution[(f / 100).toFixed(2)]);
+                        }
+                        if (totalCount > 0) {
+                            mappedFrekuensi = {
+                                tanggal: finalTargetDate, sistem: "LOMBOK",
+                                durBawah: durBawah, durNormal: durNormal, durAtas: durAtas,
+                                total: totalCount, max: fMax.toFixed(2), jamMax: timeMax,
+                                min: fMin.toFixed(2), jamMin: timeMin, avg: "'" + (sumF / totalCount).toFixed(3)
+                            };
+                        }
+                    }
+
+// 3. PROSES BEBAN PEMBANGKIT
+                    let mappedBeban = [];
+                    let bebanHeader = []; 
+                    
+                    // --- VARIABEL BARU UNTUK BPP ---
+                    let totalEnergiBPP = 0;
+                    let totalBiayaBPP = 0;
+                    let avgBiayaBPP = 0;
+                    
+                    let bebanSheetName = workbook.SheetNames.find(s => s.toUpperCase().includes("BEBAN PEMBANGKIT"));
+                    
+                    if (bebanSheetName) {
+                        const rawDataB = XLSX.utils.sheet_to_json(workbook.Sheets[bebanSheetName], {header: 1, raw: true, defval: ""});
+                        let pIdx = -1, startRowB = -1, headerRowIdx = -1;
+
+                        for(let r = 0; r < 20; r++) {
+                            if(rawDataB[r]) {
+                                for(let c = 0; c < rawDataB[r].length; c++) {
+                                    let txt = String(rawDataB[r][c]).toUpperCase().trim();
+                                    if(txt === "PEMBANGKIT" || txt.includes("NAMA MESIN")) { 
+                                        pIdx = c; 
+                                        headerRowIdx = r + 1; 
+                                        startRowB = r + 2; 
+                                        break; 
+                                    }
+                                }
+                                if(pIdx !== -1) break;
+                            }
+                        }
+
+                        if(pIdx !== -1) {
+                            function parseTime(val) {
+                                if (typeof val === 'number' && val >= 0 && val <= 1) {
+                                    let mins = Math.round(val * 24 * 60);
+                                    let h = Math.floor(mins / 60) % 24;
+                                    let m = mins % 60;
+                                    return (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m);
+                                }
+                                if (typeof val === 'string' && val.includes(":")) return val.trim();
+                                return String(val || "").trim();
+                            }
+                            
+                            let headerRow = rawDataB[headerRowIdx];
+                            for (let c = pIdx + 1; c < headerRow.length; c++) {
+                                let timeVal = parseTime(headerRow[c]);
+                                if (timeVal && timeVal.includes(":")) bebanHeader.push(timeVal);
+                            }
+                            
+                            let totalJam = bebanHeader.length > 0 ? bebanHeader.length : 48;
+
+                            for(let r = startRowB; r < rawDataB.length; r++) {
+                                let row = rawDataB[r]; if(!row) continue;
+                                let namaMesin = row[pIdx];
+                                if(namaMesin === undefined || namaMesin === null || String(namaMesin).trim() === "") continue;
+
+                                let rowData = [finalTargetDate, String(namaMesin).trim()];
+                                let rowTotalMW = 0; // Kumpulkan total MW untuk baris ini
+                                
+                                for(let i = 1; i <= totalJam; i++) {
+                                    let valRaw = row[pIdx + i];
+                                    if (valRaw !== undefined && valRaw !== null && valRaw !== "") {
+                                        let valStr = String(valRaw).replace(',', '.'); let val = parseFloat(valStr);
+                                        if (!isNaN(val) && val > 10000) val = 0;
+                                        rowData.push(isNaN(val) ? valRaw : val.toFixed(2));
+                                        
+                                        if (!isNaN(val)) rowTotalMW += val; // Tambahkan ke total MW
+                                    } else {
+                                        rowData.push(""); 
+                                    }
+                                }
+                                mappedBeban.push(rowData);
+
+                                // --- LOGIKA KALKULASI BPP ---
+                                let namaUpper = String(namaMesin).toUpperCase().trim();
+                                const isExcluded = namaUpper.includes('PADAM') || namaUpper.includes('PEMADAMAN') || namaUpper === 'UNIT 1' || namaUpper === 'UNIT 2' || namaUpper === 'UNIT 3' || namaUpper === 'UNIT 4' || namaUpper.includes('TOTAL');
+                                
+                                if (!isExcluded && rowTotalMW > 0) {
+                                     let kwh = (rowTotalMW / 2) * 1000;
+                                     let tarif = tarifDefault[namaUpper] || 0;
+                                     totalEnergiBPP += kwh;
+                                     totalBiayaBPP += (kwh * tarif);
+                                }
+
+                                // --- PEMBATAS: Berhenti setelah TOTAL GEN ---
+                                if (namaUpper === "TOTAL GEN") {
+                                    break; 
+                                }
+                            }
+                        }
+                    }
+
+                    // Hitung rata-rata setelah looping selesai
+                    avgBiayaBPP = totalEnergiBPP > 0 ? (totalBiayaBPP / totalEnergiBPP) : 0;
+                    // 4. PROSES BEBAN TRAFO PENGHANTAR
+                    let mappedTrafo = [];
+                    let trafoSheetName = workbook.SheetNames.find(s => s.toUpperCase().includes("BEBAN TRAFO PENGHANTAR"));
+                    
+                    if (trafoSheetName) {
+                        const rawDataTr = XLSX.utils.sheet_to_json(workbook.Sheets[trafoSheetName], {header: 1, raw: true});
+                        let currentGI = "";
+                        
+                        for (let r = 0; r < rawDataTr.length; r++) {
+                            let row = rawDataTr[r];
+                            if (!row) continue;
+                            
+                            let cellA = String(row[0] || "").trim();
+                            let cellB = String(row[1] || "").trim();
+                            
+                            let isBNumber = !isNaN(Number(cellB.replace(',', '.'))) && cellB !== "";
+                            let colName = (cellB !== "" && !isBNumber) ? cellB : cellA;
+                            
+                            if (colName === "" || colName.toUpperCase() === "TRAFO" || colName.includes("BEBAN (MW)") || colName.toUpperCase() === "TOTAL") continue;
+                            if (colName.toUpperCase().startsWith("GI ") || colName.toUpperCase().startsWith("GIS ")) { currentGI = colName; continue; }
+                            
+                            let isTrafoRow = (r >= 6 && r <= 47) || r === 210;
+                            let isLineRow = (r >= 132 && r <= 199) || (r >= 212 && r <= 213);
+                            
+                            if (!isTrafoRow && !isLineRow) continue; 
+                            
+                            if (currentGI !== "" && colName !== "") {
+                                let rowData = [finalTargetDate, currentGI, colName];
+                                for (let i = 0; i < 48; i++) {
+                                    let valRaw = row[2 + i];
+                                    if (valRaw !== undefined && valRaw !== null && valRaw !== "") {
+                                        let valStr = String(valRaw).replace(',', '.'); let val = parseFloat(valStr);
+                                        rowData.push(isNaN(val) ? valRaw : val.toFixed(2));
+                                    } else { rowData.push(""); }
+                                }
+                                mappedTrafo.push(rowData);
+                            }
+                        }
+                    }
+
+                    if (mappedTegangan.length === 0 && !mappedFrekuensi) {
+                        alert("Gagal: Data tidak ditemukan atau tidak valid di file ini.");
+                        resetUploadButton(); return;
+                    }
+                    // =========================================================
+                    // 6. PROSES RENCANA BEBAN (DARI SHEET "ROH")
+                    // =========================================================
+                    let mappedRencanaBeban = [];
+                    let rohSheetName = workbook.SheetNames.find(s => s.toUpperCase() === "ROH" || s.toUpperCase().includes("ROH"));
+
+                    if (rohSheetName) {
+                        const rawDataROH = XLSX.utils.sheet_to_json(workbook.Sheets[rohSheetName], {header: 1, raw: true, defval: ""});
+                        
+                       // Siapkan wadah (array 48 interval) untuk masing-masing kategori
+                            let stackRencana = {
+                            "PLTU": Array(48).fill(0), "PLTMH": Array(48).fill(0), "PLTS": Array(48).fill(0),
+                            "PLTD": Array(48).fill(0), "PLTGU (LOPE)": Array(48).fill(0), "STG LOPE": Array(48).fill(0), 
+                            "PLTG MPP": Array(48).fill(0), "TOTAL GEN": Array(48).fill(0), "PADAM": Array(48).fill(0)
+                        };
+
+                        for (let r = 0; r < rawDataROH.length; r++) {
+                            let row = rawDataROH[r];
+                            
+                            // --- BARIS INI YANG KEMARIN TERHAPUS ---
+                            if (!row || !row[1]) continue; // Lewati jika baris kosong
+                            let namaMesin = String(row[1]).toUpperCase().trim();
+                            // ---------------------------------------
+                            
+                            if ((namaMesin.includes("TOTAL") || namaMesin.includes("JUMLAH") || namaMesin.includes("SUBTOTAL")) && !namaMesin.includes("TOTAL BEBAN SISTEM")) {
+                                continue;
+                            }
+
+                            // Tentukan Kategori berdasarkan teks
+                            let kategori = "";
+                            if (namaMesin.includes("TOTAL BEBAN SISTEM")) kategori = "TOTAL GEN";
+                            else if (namaMesin.includes("Jumlah Padam Akibat Defisit") || namaMesin.includes("JUMLAH PADAM")) kategori = "PADAM";
+                            else if (namaMesin.includes("LOMBOK PEAKER-TRAFO 3") || namaMesin.includes("LOMBOK PEAKER TRAFO 3") || namaMesin.includes("STG")) kategori = "STG LOPE"; 
+                            else if (namaMesin.includes("LOMBOK PEAKER-TRAFO 1") || namaMesin.includes("LOMBOK PEAKER-TRAFO 2") || namaMesin.includes("PLTGU")) kategori = "PLTGU (LOPE)"; 
+                            else if (namaMesin.includes("PLTU")) kategori = "PLTU";
+                            else if (namaMesin.includes("PLTMH") || namaMesin.includes("SANTONG")|| namaMesin.includes("PENGGA")|| namaMesin.includes("NARMADA")|| namaMesin.includes("PUTIH")|| namaMesin.includes("SESAOT")|| namaMesin.includes("CAKRA")
+                            || namaMesin.includes("KUKUSAN")|| namaMesin.includes("KARANG BAYAN")|| namaMesin.includes("SEDAU")|| namaMesin.includes("BEDIL")) kategori = "PLTMH";
+                            else if (namaMesin.includes("PLTS")) kategori = "PLTS";
+                            else if (namaMesin.includes("PLTG") || namaMesin.includes("MPP")) kategori = "PLTG MPP";
+                            else if (namaMesin.includes("PLTD") || namaMesin.includes("SEWA") || namaMesin.includes("NPS") || namaMesin.includes("IPS") || namaMesin.includes("ND")) kategori = "PLTD";
+
+                            // Jika bukan mesin/kategori yang dicari, lewati baris ini
+                            if (kategori === "") continue;
+
+                            // ... (Biarkan kode looping pencarian 48 data di bawah ini TETAP SAMA) ...
+
+                            if (kategori !== "") {
+                                // Fungsi ini diletakkan di dalam loop Rencana Beban
+function parseMW(rawVal) {
+    if (rawVal === undefined || rawVal === null || rawVal === "") return 0;
+    
+    let vStr = String(rawVal).trim();
+    
+    // 1. Tangani format koma Indonesia (misal: "46.362,00" jadi "46362.00")
+    if (vStr.includes(',')) {
+        vStr = vStr.replace(/\./g, '').replace(/,/g, '.');
+    }
+    
+    let v = parseFloat(vStr) || 0;
+    
+    // 2. Deteksi Serial Tanggal Excel dan KEMBALIKAN KE NILAI ASLI
+    if (v > 40000) {
+        let jsDate = new Date(Math.round((v - 25569) * 86400 * 1000));
+        return jsDate.getUTCDate() + ((jsDate.getUTCMonth() + 1) / 100);
+    }
+    
+    // 3. Jika angkanya memang besar tapi bukan tanggal (anomali lain), abaikan
+    return v > 10000 ? 0 : v;
+}
+                                let dataJam = [];
+                                
+                                // Fungsi cerdas penangkal format tanggal Excel
+                                function parseMW(rawVal) {
+                                    if (rawVal === undefined || rawVal === null || rawVal === "") return 0;
+                                    
+                                    let vStr = String(rawVal).trim();
+                                    // LOGIKA BARU: Hanya ubah jika ada koma (Format ID)
+                                    if (vStr.includes(',')) {
+                                        vStr = vStr.replace(/\./g, '').replace(/,/g, '.');
+                                    }
+                                    
+                                    let v = parseFloat(vStr) || 0;
+                                    
+                                    if (v > 40000) {
+                                        let jsDate = new Date(Math.round((v - 25569) * 86400 * 1000));
+                                        return jsDate.getUTCDate() + ((jsDate.getUTCMonth() + 1) / 100);
+                                    }
+                                    return v > 10000 ? 0 : v;
+                                }
+
+                                // Ambil Pagi (Indeks 4 s/d 27)
+                                for (let i = 4; i <= 27; i++) dataJam.push(parseMW(row[i]));
+                                // Ambil Siang (Indeks 33 s/d 56)
+                                for (let i = 33; i <= 56; i++) dataJam.push(parseMW(row[i]));
+
+                                // Tambahkan nilainya ke kategori terkait
+                                for (let i = 0; i < 48; i++) stackRencana[kategori][i] += dataJam[i];
+                            }
+                        }
+
+                        // Susun ke format database
+                        for (let kat in stackRencana) {
+                            let sumVal = stackRencana[kat].reduce((a, b) => a + b, 0);
+                            if (sumVal > 0 || kat === "TOTAL GEN") { // Hanya simpan jika mesinnya direncanakan nyala
+                                let rowData = [finalTargetDate, kat];
+                                for (let i = 0; i < 48; i++) {
+                                    let val = stackRencana[kat][i];
+                                    rowData.push(val > 0 ? val.toFixed(2) : ""); // Kosongkan jika 0 agar chart bersih
+                                }
+                                mappedRencanaBeban.push(rowData);
+                            }
+                        }
+                    }
+                    // =========================================================
+// --- EKSTRAKSI DATA RENCANA BPP DARI EXCEL (DENGAN PENGAMAN ANTI-CRASH) ---
+function extractBPPData(workbook, targetDate) {
+    let totalEnergi = 0, totalBiaya = 0, biayaRataRata = 0;
+    try {
+        if (!workbook || !workbook.SheetNames) return [targetDate, 0, 0, 0];
+        
+        let rohSheetName = workbook.SheetNames.find(s => {
+            let name = String(s || "").toUpperCase().trim();
+            return name === "ROH" || name.includes("ROH") || name.includes("RENCANA");
+        });
+
+        if (rohSheetName && workbook.Sheets[rohSheetName]) {
+            const sheet = workbook.Sheets[rohSheetName];
+            const rawData = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+
+            const parseSafeNum = (val) => {
+                if (typeof val === 'number') return isNaN(val) ? 0 : val;
+                if (!val) return 0;
+                let str = String(val).trim();
+                if (str.includes(',')) str = str.replace(/\./g, '').replace(/,/g, '.');
+                let num = parseFloat(str);
+                return isNaN(num) ? 0 : num;
+            };
+
+            for (let r = 0; r < rawData.length; r++) {
+                let row = rawData[r];
+                if (!row || !Array.isArray(row) || row.length === 0) continue;
+
+                for (let c = 0; c < row.length; c++) {
+                    let cellText = String(row[c] || "").toUpperCase().trim();
+                    if (!cellText) continue;
+
+                    const findRightNum = () => {
+                        for (let k = c + 1; k < row.length; k++) {
+                            let num = parseSafeNum(row[k]);
+                            if (num > 0) return num;
+                        }
+                        return 0;
+                    };
+
+                    if (cellText.includes("PRODUKSI") && cellText.includes("ENERGI")) {
+                        let mwh = findRightNum();
+                        if (mwh > 0) totalEnergi = mwh * 1000;
+                    } else if (cellText.includes("BIAYA") && cellText.includes("OPERASI")) {
+                        let biaya1000 = findRightNum();
+                        if (biaya1000 > 0) totalBiaya = biaya1000 * 1000;
+                    } else if (cellText.includes("RP/KWH") || (cellText.includes("BIAYA") && cellText.includes("ENERGI") && !cellText.includes("OPERASI"))) {
+                        let avg = findRightNum();
+                        if (avg > 0) biayaRataRata = avg;
+                    }
+                }
+            }
+        }
+        if (biayaRataRata === 0 && totalEnergi > 0 && totalBiaya > 0) {
+            biayaRataRata = totalBiaya / totalEnergi;
+        }
+    } catch (err) {
+        console.error("Error extractBPPData:", err);
+    }
+    return [targetDate, totalEnergi, totalBiaya, biayaRataRata];
+}
+// 1. Ekstrak Data Rencana BPP dari Sheet ROH
+                    let rencanaBPP = extractBPPData(workbook, finalTargetDate);
+                    
+                    // 2. Gabungkan Realisasi (Kolom B,C,D) & Rencana (Kolom E,F,G)
+                    let bppSummaryData = [
+                        finalTargetDate,       // Kolom A: Tanggal
+                        totalEnergiBPP,        // Kolom B: Realisasi Energi (kWh)
+                        totalBiayaBPP,         // Kolom C: Realisasi Biaya (Rp)
+                        avgBiayaBPP,           // Kolom D: Realisasi Biaya Rata-rata (Rp/kWh)
+                        rencanaBPP[1],         // Kolom E: Rencana Energi (kWh)
+                        rencanaBPP[2],         // Kolom F: Rencana Biaya (Rp)
+                        rencanaBPP[3]          // Kolom G: Rencana Biaya Rata-rata (Rp/kWh)
+                    ];
+
+                    statusText.innerHTML = "Menyimpan ke Cloud (Overwrite data lama jika ada)...";
+
+                    fetch(GAS_URL, {
+                        method: 'POST', 
+                        redirect: 'follow', 
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify({ 
+                            action: "save_all", 
+                            data: mappedTegangan, 
+                            frekuensi: mappedFrekuensi, 
+                            beban: mappedBeban, 
+                            bebanHeader: bebanHeader,
+                            sebaranFrekuensi: mappedSebaran, 
+                            bebanTrafo: mappedTrafo,
+                            rencanaBeban: mappedRencanaBeban, 
+                            bppSummary: bppSummaryData // <-- Mengirimkan 7 kolom lengkap
+                        })
+                    })                                        .then(res => res.json())
+                                        .then(response => {
+                                            if(response.status === "success" || response.teganganData) {
+                                                alert(`Sukses! Logsheet berhasil direkam secara presisi.`);
+                                                window.location.reload(); 
+                                            } else {
+                                                let errMsg = response.message || response.error || JSON.stringify(response);
+                                                alert("Gagal dari Server: " + errMsg); resetUploadButton();
+                                            }
+                                        }).catch(err => { alert("Error Jaringan: " + err); resetUploadButton(); });
+
+                                    } catch (error) { 
+                                        alert("Error saat membaca file: " + error); 
+                                        resetUploadButton(); 
+                                    }
+                                };
+                                reader.readAsArrayBuffer(file);
+                            });
+                            
+                            function resetUploadButton() {
+                                const btn = document.getElementById('process-btn');
+                                btn.innerHTML = "Process Data"; btn.disabled = false;
+                                btn.classList.replace('bg-slate-400', 'bg-emerald-500');
+                                document.getElementById('upload-status').classList.add('hidden');
+                            }
+
+        // ==========================================
+        // TARIK DATA DASHBOARD (SAAT HALAMAN DIMUAT)
+        // ==========================================
+        window.onload = () => {
+            const voltageContent = document.getElementById('voltage-summary-content');
+            const freqContent = document.getElementById('frequency-summary-content');
+
+            fetch(GAS_URL, { redirect: 'follow' })
+                .then(res => res.json())
+                .then(data => {
+                    // --- 1. RENDER TEGANGAN ---
+                    const teganganData = data.teganganData;
+                    if (teganganData && teganganData.length > 0) {
+                        let maxV = -Infinity, maxGI = "", maxDate = "", maxTime = "";
+                        let minV = Infinity, minGI = "", minDate = "", minTime = "";
+                        let totalAvg = 0, avgCount = 0;
+
+                        teganganData.forEach(item => {
+                            let maxParts = String(item.max).split('('); let valMax = parseFloat(maxParts[0]); let jamMax = maxParts[1] ? maxParts[1].replace(')', '').trim() : "";
+                            let minParts = String(item.min).split('('); let valMin = parseFloat(minParts[0]); let jamMin = minParts[1] ? minParts[1].replace(')', '').trim() : "";
+                            let valAvg = parseFloat(item.avg);
+                            if (!isNaN(valMax) && valMax > maxV) { maxV = valMax; maxGI = item.nama; maxDate = item.tanggal; maxTime = jamMax; }
+                            if (!isNaN(valMin) && valMin < minV) { minV = valMin; minGI = item.nama; minDate = item.tanggal; minTime = jamMin; }
+                            if (!isNaN(valAvg)) { totalAvg += valAvg; avgCount++; }
+                        });
+
+                        let finalAvg = avgCount > 0 ? (totalAvg / avgCount).toFixed(2) : "0.00";
+                        maxDate = cleanDateStr(maxDate); minDate = cleanDateStr(minDate);
+                        let maxTimeHtml = maxTime ? `<i class="fa-regular fa-clock ml-2 mr-1 text-emerald-500/70"></i> <span class="font-bold text-emerald-600">${maxTime}</span>` : "";
+                        let minTimeHtml = minTime ? `<i class="fa-regular fa-clock ml-2 mr-1 text-rose-500/70"></i> <span class="font-bold text-rose-600">${minTime}</span>` : "";
+
+                        voltageContent.innerHTML = `
+                            <div class="space-y-4 mt-2">
+                                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                                    <div><div class="text-slate-400 text-[11px] uppercase tracking-wider font-bold">Tegangan Tertinggi</div><div class="text-sm font-semibold text-slate-700 mt-1"><i class="fa-solid fa-location-dot text-emerald-500 mr-1.5"></i>${maxGI}</div><div class="text-[11px] text-slate-500 mt-0.5"><i class="fa-regular fa-calendar mr-1.5"></i>${maxDate} ${maxTimeHtml}</div></div>
+                                    <div class="text-emerald-500 font-bold text-3xl">${maxV} <span class="text-sm font-semibold text-emerald-600/60">kV</span></div>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                                    <div><div class="text-slate-400 text-[11px] uppercase tracking-wider font-bold">Tegangan Terendah</div><div class="text-sm font-semibold text-slate-700 mt-1"><i class="fa-solid fa-location-dot text-rose-500 mr-1.5"></i>${minGI}</div><div class="text-[11px] text-slate-500 mt-0.5"><i class="fa-regular fa-calendar mr-1.5"></i>${minDate} ${minTimeHtml}</div></div>
+                                    <div class="text-rose-500 font-bold text-3xl">${minV} <span class="text-sm font-semibold text-rose-600/60">kV</span></div>
+                                </div>
+                                <div class="flex justify-between items-center pt-1">
+                                    <div class="text-slate-400 text-[11px] uppercase tracking-wider font-bold">Rata-rata Seluruh Sistem</div>
+                                    <div class="text-blue-600 font-bold text-2xl">${finalAvg} <span class="text-sm font-semibold text-blue-600/60">kV</span></div>
+                                </div>
+                            </div>
+                        `;
+                    } else { voltageContent.innerHTML = `<span class="text-slate-500">Database tegangan kosong.</span>`; }
+
+                    // --- 2. RENDER FREKUENSI ---
+                    const frekuensiData = data.frekuensiData;
+                    if (frekuensiData && frekuensiData.length > 0) {
+                        let maxF = -Infinity, maxDateF = "", maxTimeF = "";
+                        let minF = Infinity, minDateF = "", minTimeF = "";
+                        let totalAvgF = 0, avgCountF = 0;
+
+                        frekuensiData.forEach(item => {
+                            let valMax = parseFloat(item.max); let valMin = parseFloat(item.min); let valAvg = parseFloat(item.avg);
+                            if (!isNaN(valMax) && valMax > maxF) { maxF = valMax; maxDateF = item.tanggal; maxTimeF = extractTimeOnly(item.jamMax); }
+                            if (!isNaN(valMin) && valMin < minF) { minF = valMin; minDateF = item.tanggal; minTimeF = extractTimeOnly(item.jamMin); }
+                            if (!isNaN(valAvg)) { totalAvgF += valAvg; avgCountF++; }
+                        });
+                        let finalAvgF = avgCountF > 0 ? (totalAvgF / avgCountF).toFixed(3) : "0.000";
+                        maxDateF = cleanDateStr(maxDateF); minDateF = cleanDateStr(minDateF);
+
+                        let maxTimeFHtml = maxTimeF && maxTimeF !== "-" ? `<i class="fa-regular fa-clock ml-2 mr-1 text-emerald-500/70"></i> <span class="font-bold text-emerald-600">${maxTimeF}</span>` : "";
+                        let minTimeFHtml = minTimeF && minTimeF !== "-" ? `<i class="fa-regular fa-clock ml-2 mr-1 text-rose-500/70"></i> <span class="font-bold text-rose-600">${minTimeF}</span>` : "";
+
+                        freqContent.innerHTML = `
+                            <div class="space-y-4 mt-2">
+                                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                                    <div><div class="text-slate-400 text-[11px] uppercase tracking-wider font-bold">Frekuensi Max</div><div class="text-[11px] text-slate-500 mt-1.5"><i class="fa-regular fa-calendar mr-1.5"></i>${maxDateF} ${maxTimeFHtml}</div></div>
+                                    <div class="text-emerald-500 font-bold text-3xl">${maxF} <span class="text-sm font-semibold text-emerald-600/60">Hz</span></div>
+                                </div>
+                                <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                                    <div><div class="text-slate-400 text-[11px] uppercase tracking-wider font-bold">Frekuensi Min</div><div class="text-[11px] text-slate-500 mt-1.5"><i class="fa-regular fa-calendar mr-1.5"></i>${minDateF} ${minTimeFHtml}</div></div>
+                                    <div class="text-rose-500 font-bold text-3xl">${minF} <span class="text-sm font-semibold text-rose-600/60">Hz</span></div>
+                                </div>
+                                <div class="flex justify-between items-center pt-2">
+                                    <div class="text-slate-400 text-[11px] uppercase tracking-wider font-bold">Rata-rata Frekuensi</div>
+                                    <div class="text-blue-600 font-bold text-2xl">${finalAvgF} <span class="text-sm font-semibold text-blue-600/60">Hz</span></div>
+                                </div>
+                            </div>
+                        `;
+                    } else { freqContent.innerHTML = `<span class="text-slate-500">Database frekuensi kosong.</span>`; }
+
+                    // --- 3. RENDER GRAFIK BEBAN & PERBANDINGAN ---
+                    dashboardBebanData = data.bebanData || [];
+                    bebanHeaderRaw = data.bebanHeader || [];
+                    dashboardRencanaData = data.rencanaData || [];
+
+                    if (dashboardBebanData.length > 0) {
+                        let lastTotalGenRow = dashboardBebanData.slice().reverse().find(row => String(row[1]).toUpperCase().trim() === "TOTAL GEN");
+                        
+                        if (lastTotalGenRow) {
+                            let latestDateStr = lastTotalGenRow[0].replace(/'/g, "").trim(); 
+                            let dParts = latestDateStr.split('-'); 
+                            
+                            const datePicker = document.getElementById('chart-date-picker');
+                            if (datePicker) {
+                                datePicker.value = `${dParts[2]}-${dParts[1]}-${dParts[0]}`; 
+                                
+                                generateCompareCheckboxes(datePicker.value);
+                                renderBebanChart();
+
+                                datePicker.addEventListener('change', (e) => {
+                                    let val = e.target.value;
+                                    if(val) {
+                                        generateCompareCheckboxes(val);
+                                        renderBebanChart(); 
+                                    }
+                                });
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    voltageContent.innerHTML = `<span class="text-rose-500 font-medium"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Gagal memuat data.</span>`;
+                    freqContent.innerHTML = `<span class="text-rose-500 font-medium"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Gagal memuat data.</span>`;
+                    console.error("Terjadi error saat load data:", error);
+                });
+        };
+
+        const logoutBtn = document.getElementById('logout-btn');
+        if(logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault(); localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html';
+            });
+        }
+    </script>
+</body>
+</html>

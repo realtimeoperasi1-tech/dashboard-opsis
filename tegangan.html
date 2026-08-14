@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Detail Tegangan - Realtime Opsis</title>
+    <!-- Library Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Library FontAwesome (Ikon) -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Library SheetJS (Untuk Export Excel) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="icon" href="data:,">
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shadow-sm z-10 relative">
+        <div>
+            <div class="p-8">
+                <h2 class="text-3xl font-bold text-blue-600 tracking-tight">PLN<span class="text-yellow-400">.</span></h2>
+                <p class="text-xs text-slate-400 mt-1 uppercase tracking-wider font-semibold">Realtime Opsis 1</p>
+            </div>
+            
+            <nav class="px-4 space-y-2 mt-4">
+                <a href="index.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-chart-pie w-6 mr-3"></i>Dashboard
+                </a>
+                <a href="tegangan.html" class="flex items-center px-4 py-3 bg-blue-50 text-blue-600 font-semibold rounded-xl transition">
+                    <i class="fa-solid fa-bolt w-6 mr-3"></i>Tegangan
+                </a>
+                <!-- MENU FREKUENSI DENGAN SUB MENU -->
+                <div class="space-y-1">
+                    <a href="frekuensi.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-wave-square w-6 mr-3"></i>Summary Frekuensi
+                    </a>
+                </div>
+                <!-- MENU BARU TAMBAHKAN DI SINI -->
+                <a href="beban.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                    <i class="fa-solid fa-industry w-6 mr-3"></i>Load Profile
+                </a>
+                <a href="rekap_pembebanan.html" class="flex items-center px-4 py-3 text-slate-500 font-medium hover:bg-slate-50 hover:text-blue-600 rounded-xl transition">
+                        <i class="fa-solid fa-network-wired w-6 mr-3"></i>Pembebanan Trafo dan Line Transmisi
+                    </a>
+            </nav>
+        </div>
+
+        <div class="p-6 border-t border-slate-100">
+            <button id="logout-btn" class="flex items-center px-4 py-2 w-full text-rose-500 font-medium hover:bg-rose-50 rounded-xl transition">
+                <i class="fa-solid fa-arrow-right-from-bracket w-6 mr-2"></i>Logout
+            </button>
+        </div>
+    </aside>
+
+    <!-- KONTEN UTAMA -->
+    <main class="flex-1 overflow-y-auto p-10 relative bg-slate-50">
+        <div class="max-w-5xl mx-auto">
+            
+            <!-- HEADER HALAMAN & RANGE PICKER -->
+            <div class="flex flex-col xl:flex-row xl:items-end justify-between mb-8 gap-4">
+                <div>
+                    <h1 class="text-3xl font-bold text-slate-800 flex items-center">
+                        <i class="fa-solid fa-bolt text-yellow-500 mr-4"></i>Rekapan Tegangan (150 kV)
+                    </h1>
+                    <p id="tanggal-subtitle" class="text-sm text-slate-500 mt-2 font-medium ml-9">Mengambil data dari server...</p>
+                </div>
+                
+                <div class="flex items-center flex-wrap gap-2">
+                    <!-- FILTER RANGE TANGGAL -->
+                    <div class="flex items-center bg-white border border-slate-300 p-1.5 rounded-xl shadow-sm">
+                        <div class="flex items-center px-2">
+                            <i class="fa-regular fa-calendar text-slate-400 mr-2"></i>
+                            <input type="date" id="start-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent cursor-pointer font-medium hover:bg-slate-50 rounded-lg transition" title="Tanggal Awal">
+                        </div>
+                        <span class="text-slate-300 font-bold px-1">-</span>
+                        <div class="flex items-center px-2">
+                            <input type="date" id="end-date" class="text-sm text-slate-700 p-2 outline-none bg-transparent cursor-pointer font-medium hover:bg-slate-50 rounded-lg transition" title="Tanggal Akhir">
+                        </div>
+                        <button id="filter-btn" class="bg-blue-500 hover:bg-blue-600 text-white p-2.5 px-5 rounded-lg text-sm font-bold transition shadow-sm flex items-center ml-1 disabled:opacity-50 disabled:cursor-not-allowed">
+                            Tampilkan
+                        </button>
+                    </div>
+
+                    <!-- TOMBOL DOWNLOAD EXCEL (DISembunyikan default) -->
+                    <button id="download-btn" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white p-3 px-5 rounded-xl text-sm font-bold transition shadow-sm shadow-emerald-500/30 flex items-center gap-2">
+                        <i class="fa-solid fa-file-excel"></i> Download Excel
+                    </button>
+                </div>
+            </div>
+
+            <!-- CONTAINER DATA (CARD UTAMA) -->
+            <div class="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden min-h-[400px]" id="data-container">
+                <!-- Tampilan Default -->
+                <div class="flex flex-col items-center justify-center h-[400px] text-center p-6" id="empty-state">
+                    <div class="w-20 h-20 bg-blue-50 text-blue-500 rounded-full flex items-center justify-center text-3xl mb-4" id="empty-icon">
+                        <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    </div>
+                    <h3 class="text-lg font-bold text-slate-700 mb-2" id="empty-title">Memuat Database...</h3>
+                    <p class="text-slate-500 text-sm max-w-md" id="empty-desc">Harap tunggu sebentar, sedang menarik seluruh rekapan data operasional.</p>
+                </div>
+
+                <!-- Tampilan Tabel -->
+                <div id="table-state" class="hidden overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase text-[11px] tracking-wider font-bold">
+                                <th class="p-5 font-bold">Nama Gardu Induk</th>
+                                <th class="p-5 font-bold">Tegangan Max (Periode)</th>
+                                <th class="p-5 font-bold">Tegangan Min (Periode)</th>
+                                <th class="p-5 font-bold">Rata-rata</th>
+                                <th class="p-5 font-bold text-rose-500 text-center">Σ Ekskursi < 135</th>
+                                <th class="p-5 font-bold text-rose-500 text-center">Σ Ekskursi > 165</th>
+                            </tr>
+                        </thead>
+                        <tbody id="table-body" class="text-sm text-slate-700 divide-y divide-slate-100">
+                            <!-- Baris data diisi oleh JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // PASTIKAN URL INI MILIK ANDA
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxLkIvtxTzSclnq850j3_vIDaGP8BZ9G96L7rMudJ85trUv7rKsIEyKOXwrQqVpsls4Ew/exec'; 
+        
+        let allTeganganData = []; 
+        let rawFilteredDataForExcel = []; // Simpan data mentah untuk bahan Excel
+
+        // Parser String DD-MM-YYYY ke Timestamp untuk sorting/filter
+        function parseDBDate(dStr) {
+            if (!dStr) return 0;
+            let cleanStr = dStr.replace(/'/g, "");
+            let parts = cleanStr.split('-');
+            if(parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]).getTime();
+            return 0;
+        }
+
+        // Parser Input Date YYYY-MM-DD ke Timestamp
+        function parseInputDate(dStr) {
+            if (!dStr) return 0;
+            let parts = dStr.split('-');
+            if(parts.length === 3) return new Date(parts[0], parts[1] - 1, parts[2]).getTime();
+            return 0;
+        }
+
+        function setEmptyState(icon, title, desc) {
+            document.getElementById('empty-icon').innerHTML = `<i class="${icon}"></i>`;
+            document.getElementById('empty-title').innerText = title;
+            document.getElementById('empty-desc').innerText = desc;
+            document.getElementById('table-state').classList.add('hidden');
+            document.getElementById('empty-state').classList.remove('hidden');
+            document.getElementById('download-btn').classList.add('hidden'); // Sembunyikan Excel
+        }
+
+        window.onload = () => {
+            const filterBtn = document.getElementById('filter-btn');
+            filterBtn.disabled = true;
+
+            fetch(GAS_URL, { redirect: 'follow' })
+                .then(res => res.json())
+                .then(data => {
+                    allTeganganData = data.teganganData || [];
+
+                    if (allTeganganData.length === 0) {
+                        setEmptyState("fa-solid fa-database", "Database Kosong", "Belum ada data tegangan yang diunggah ke server.");
+                        document.getElementById('tanggal-subtitle').innerText = "Database kosong.";
+                        return;
+                    }
+
+                    document.getElementById('tanggal-subtitle').innerText = "Data berhasil dimuat. Silakan pilih rentang tanggal.";
+                    setEmptyState("fa-regular fa-calendar-check", "Pilih Rentang Tanggal", "Silakan atur tanggal Awal dan tanggal Akhir pada menu di atas, lalu klik Tampilkan.");
+                    filterBtn.disabled = false;
+                })
+                .catch(error => {
+                    setEmptyState("fa-solid fa-triangle-exclamation text-rose-500", "Gagal Memuat Data", "Terjadi kesalahan saat menghubungi server.");
+                    document.getElementById('tanggal-subtitle').innerHTML = '<span class="text-rose-500">Koneksi terputus.</span>';
+                });
+        };
+
+        // EVENT LISTENER TAMPILKAN (FILTER)
+        document.getElementById('filter-btn').addEventListener('click', function() {
+            const startStr = document.getElementById('start-date').value;
+            const endStr = document.getElementById('end-date').value;
+            const subtitle = document.getElementById('tanggal-subtitle');
+            
+            if (!startStr || !endStr) { alert("Mohon isi kedua kotak tanggal (Awal dan Akhir)."); return; }
+
+            const startTime = parseInputDate(startStr);
+            const endTime = parseInputDate(endStr);
+
+            if (startTime > endTime) { alert("Tanggal Awal tidak boleh lebih besar dari Tanggal Akhir."); return; }
+
+            let sParts = startStr.split('-'); let dispStart = `${sParts[2]}-${sParts[1]}-${sParts[0]}`;
+            let eParts = endStr.split('-'); let dispEnd = `${eParts[2]}-${eParts[1]}-${eParts[0]}`;
+            
+            if (dispStart === dispEnd) {
+                subtitle.innerHTML = `Menampilkan rekapan tanggal: <strong class="text-slate-700">${dispStart}</strong>`;
+            } else {
+                subtitle.innerHTML = `Menampilkan rekapan periode: <strong class="text-slate-700">${dispStart} s.d. ${dispEnd}</strong>`;
+            }
+
+            // FILTER
+            const filteredData = allTeganganData.filter(item => {
+                let itemTime = parseDBDate(item.tanggal);
+                return itemTime >= startTime && itemTime <= endTime;
+            });
+
+            if (filteredData.length === 0) {
+                setEmptyState("fa-regular fa-folder-open", "Data Tidak Ditemukan", `Tidak ada rekapan logsheet pada rentang ${dispStart} hingga ${dispEnd}.`);
+                return;
+            }
+
+            rawFilteredDataForExcel = filteredData; // Simpan untuk Excel
+            let grouped = {};
+            
+            // AGREGASI UNTUK UI TABEL WEB
+            filteredData.forEach(item => {
+                if(!grouped[item.nama]) {
+                    grouped[item.nama] = {
+                        nama: item.nama,
+                        maxVal: -Infinity, maxTime: "", maxDate: "",
+                        minVal: Infinity, minTime: "", minDate: "",
+                        sumAvg: 0, countAvg: 0, eksBawah: 0, eksAtas: 0
+                    };
+                }
+                let g = grouped[item.nama];
+                
+                let maxParts = String(item.max).split('(');
+                let valMax = parseFloat(maxParts[0]);
+                if(!isNaN(valMax) && valMax > g.maxVal) {
+                    g.maxVal = valMax; g.maxTime = maxParts[1] ? `(${maxParts[1]}` : ""; g.maxDate = String(item.tanggal).replace(/'/g, "");
+                }
+                
+                let minParts = String(item.min).split('(');
+                let valMin = parseFloat(minParts[0]);
+                if(!isNaN(valMin) && valMin < g.minVal) {
+                    g.minVal = valMin; g.minTime = minParts[1] ? `(${minParts[1]}` : ""; g.minDate = String(item.tanggal).replace(/'/g, "");
+                }
+                
+                let valAvg = parseFloat(item.avg);
+                if(!isNaN(valAvg)) { g.sumAvg += valAvg; g.countAvg++; }
+                
+                g.eksBawah += parseInt(item.eksBawah) || 0;
+                g.eksAtas += parseInt(item.eksAtas) || 0;
+            });
+
+            // RENDER UI TABEL
+            const tableBody = document.getElementById('table-body');
+            tableBody.innerHTML = "";
+
+            Object.values(grouped).forEach(g => {
+                let finalAvg = g.countAvg > 0 ? (g.sumAvg / g.countAvg).toFixed(2) : "0.00";
+                let eksBawahClass = g.eksBawah > 0 ? "text-rose-600 font-bold bg-rose-50" : "text-slate-400 font-medium";
+                let eksAtasClass = g.eksAtas > 0 ? "text-rose-600 font-bold bg-rose-50" : "text-slate-400 font-medium";
+                let dateNoteMax = (dispStart !== dispEnd) ? `<br/><span class="text-[9px] text-slate-400 uppercase font-semibold"><i class="fa-regular fa-calendar mr-1"></i>${g.maxDate}</span>` : "";
+                let dateNoteMin = (dispStart !== dispEnd) ? `<br/><span class="text-[9px] text-slate-400 uppercase font-semibold"><i class="fa-regular fa-calendar mr-1"></i>${g.minDate}</span>` : "";
+
+                let maxDisplay = g.maxVal !== -Infinity ? `${g.maxVal.toFixed(2)} <span class="text-[11px] text-slate-400 font-normal ml-1">${g.maxTime}</span> ${dateNoteMax}` : "-";
+                let minDisplay = g.minVal !== Infinity ? `${g.minVal.toFixed(2)} <span class="text-[11px] text-slate-400 font-normal ml-1">${g.minTime}</span> ${dateNoteMin}` : "-";
+
+                let tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-5 font-semibold text-slate-800">${g.nama}</td>
+                    <td class="p-5 text-emerald-600 font-medium leading-tight">${maxDisplay}</td>
+                    <td class="p-5 text-rose-500 font-medium leading-tight">${minDisplay}</td>
+                    <td class="p-5 text-blue-600 font-bold">${finalAvg} <span class="font-medium text-xs text-blue-400">kV</span></td>
+                    <td class="p-5 text-center ${eksBawahClass}">${g.eksBawah}</td>
+                    <td class="p-5 text-center ${eksAtasClass}">${g.eksAtas}</td>
+                `;
+                tableBody.appendChild(tr);
+            });
+
+            document.getElementById('empty-state').classList.add('hidden');
+            document.getElementById('table-state').classList.remove('hidden');
+            
+            // MUNCULKAN TOMBOL DOWNLOAD
+            document.getElementById('download-btn').classList.remove('hidden');
+        });
+
+        // ==========================================
+        // C. LOGIKA EXPORT EXCEL (FORMAT MATRIKS PLN)
+        // ==========================================
+        document.getElementById('download-btn').addEventListener('click', function() {
+            if (rawFilteredDataForExcel.length === 0) { alert("Tidak ada data untuk diekspor!"); return; }
+
+            // 1. Ambil daftar tanggal dan urutkan (Tgl 1, 2, 3...)
+            let uniqueDates = [...new Set(rawFilteredDataForExcel.map(item => String(item.tanggal).replace(/'/g, "")))];
+            uniqueDates.sort((a, b) => parseDBDate(a) - parseDBDate(b)); // Urut kronologis
+
+            // 2. Ambil daftar GI statis sesuai urutan PLN (Bisa disesuaikan)
+            const giOrder = [
+                "GI AMPENAN", "GI JERANJANG", "GI SENGKOL", "GI MANTANG", "GI KUTA", 
+                "GI PAOKMOTONG", "GI PRINGGABAYA", "GI SAMBELIA", "GI TANJUNG", "GI BAYAN", 
+                "GIS PEAKER", "GI SWITCHING", "GI MATARAM", "GI SEKOTONG"
+            ];
+            
+            // Header baris Excel
+            let headerRow = ["TANGGAL", ...giOrder];
+
+            // 3. Helper untuk men-generate blok tabel Min, Max, atau Avg
+            function generateMatrix(tipe) { // tipe: 'min', 'max', 'avg'
+                let matrix = [];
+                // Push Judul Tambahan di Ujung Kanan
+                let headerCopy = [...headerRow];
+                if(tipe === 'min') headerCopy.push("V RENDAH");
+                if(tipe === 'max') headerCopy.push("V TINGGI");
+                if(tipe === 'avg') headerCopy.push("V RATA-RATA");
+                
+                matrix.push(headerCopy);
+
+                // Looping per tanggal
+                uniqueDates.forEach(date => {
+                    let dateLabel = parseInt(date.split('-')[0]); // Ambil angka tanggalnya saja (misal: 01 -> 1)
+                    let row = [dateLabel]; // Kolom A = Tanggal
+                    
+                    let minInRow = Infinity, maxInRow = -Infinity, sumAvgInRow = 0, countAvgInRow = 0;
+
+                    // Looping per GI untuk mengisi kolom
+                    giOrder.forEach(giName => {
+                        let dataPoint = rawFilteredDataForExcel.find(d => String(d.tanggal).replace(/'/g, "") === date && d.nama.toUpperCase() === giName);
+                        if(dataPoint) {
+                            let val = 0;
+                            if(tipe === 'min') val = parseFloat(String(dataPoint.min).split('(')[0]);
+                            if(tipe === 'max') val = parseFloat(String(dataPoint.max).split('(')[0]);
+                            if(tipe === 'avg') val = parseFloat(dataPoint.avg);
+                            
+                            row.push(!isNaN(val) ? val.toFixed(2) : "");
+
+                            // Untuk perhitungan kolom V RENDAH, V TINGGI, dll di ujung
+                            if(!isNaN(val)) {
+                                if(val < minInRow) minInRow = val;
+                                if(val > maxInRow) maxInRow = val;
+                                sumAvgInRow += val; countAvgInRow++;
+                            }
+                        } else {
+                            row.push(""); // Kosong jika GI tidak aktif di hari itu
+                        }
+                    });
+
+                    // Kolom paling ujung (V RENDAH, V TINGGI, V RATA-RATA)
+                    if(tipe === 'min') row.push(minInRow !== Infinity ? minInRow.toFixed(2) : "");
+                    if(tipe === 'max') row.push(maxInRow !== -Infinity ? maxInRow.toFixed(2) : "");
+                    if(tipe === 'avg') row.push(countAvgInRow > 0 ? (sumAvgInRow/countAvgInRow).toFixed(2) : "");
+
+                    matrix.push(row);
+                });
+                return matrix;
+            }
+
+            // 4. Susun 3 Blok Tabel Menjadi 1
+            let finalExcelData = [];
+            finalExcelData = finalExcelData.concat(generateMatrix('min')); // Blok 1: Min
+            finalExcelData.push([]); // Baris kosong pemisah
+            finalExcelData.push([]); // Baris kosong pemisah
+            finalExcelData = finalExcelData.concat(generateMatrix('max')); // Blok 2: Max
+            finalExcelData.push([]); 
+            finalExcelData.push([]); 
+            finalExcelData = finalExcelData.concat(generateMatrix('avg')); // Blok 3: Rata-Rata
+
+            // 5. Build dan Download File Excel
+            const worksheet = XLSX.utils.aoa_to_sheet(finalExcelData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Laporan");
+            
+            // Nama File Unik (Range Tanggal)
+            let sParts = document.getElementById('start-date').value.split('-'); 
+            let dispStart = `${sParts[2]}-${sParts[1]}-${sParts[0]}`;
+            let eParts = document.getElementById('end-date').value.split('-'); 
+            let dispEnd = `${eParts[2]}-${eParts[1]}-${eParts[0]}`;
+            let fileName = dispStart === dispEnd ? `Laporan_${dispStart}.xlsx` : `Laporan_${dispStart}_sd_${dispEnd}.xlsx`;
+            
+            XLSX.writeFile(workbook, fileName);
+        });
+
+        // Logout
+        const logoutBtn = document.getElementById('logout-btn');
+        if(logoutBtn) {
+            logoutBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                localStorage.removeItem('isLoggedIn');
+                window.location.href = 'login.html';
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome - Bank Data Operasi Sistem 1</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Memastikan font default terlihat bagus di bg putih */
+        body {
+            font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-white text-slate-800 min-h-screen flex items-center justify-center p-4">
+
+    <div class="w-full max-w-md bg-white border border-slate-200 rounded-3xl p-10 shadow-xl shadow-slate-100">
+        
+        <div class="text-center mb-10">
+            <div class="flex justify-center mb-5">
+                <img 
+                    src="https://upload.wikimedia.org/wikipedia/commons/9/97/Logo_PLN.png" 
+                    alt="Logo PLN" 
+                    class="h-20 w-auto object-contain"
+                >
+            </div>
+            
+            <h1 class="text-3xl font-extrabold text-slate-950 tracking-tight">Welcome</h1>
+            <p class="text-sm text-slate-500 mt-1.5 font-medium">Bank Data Operasi Sistem 1</p>
+        </div>
+
+        <div id="error-message" class="hidden bg-rose-50 border border-rose-200 text-rose-600 text-sm rounded-xl p-4 mb-5 flex items-center space-x-3">
+            <i class="fa-solid fa-circle-exclamation text-lg"></i>
+            <span class="font-medium">ID atau Password salah. Silakan coba lagi!</span>
+        </div>
+
+        <form id="login-form" class="space-y-6">
+            <div>
+                <label class="text-xs font-bold text-slate-600 block mb-2 uppercase tracking-wider">User ID</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-base">
+                        <i class="fa-solid fa-user"></i>
+                    </span>
+                    <input type="text" id="user-id" required placeholder="Masukkan ID Petugas" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                </div>
+            </div>
+
+            <div>
+                <label class="text-xs font-bold text-slate-600 block mb-2 uppercase tracking-wider">Password</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-4 text-slate-400 text-base">
+                        <i class="fa-solid fa-lock"></i>
+                    </span>
+                    <input type="password" id="password" required placeholder="••••••••" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-11 pr-4 py-3.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition">
+                </div>
+            </div>
+
+            <button type="submit" 
+                class="w-full bg-[#0096C7] hover:bg-[#007EA7] active:bg-[#00668C] text-white font-bold text-sm py-3.5 rounded-xl shadow-lg shadow-blue-500/20 transition duration-200 flex items-center justify-center space-x-2 mt-4">
+                <span>Sign In Ke Dashboard</span>
+                <i class="fa-solid fa-right-to-bracket text-xs"></i>
+            </button>
+        </form>
+
+        <p class="text-center text-xs text-slate-400 mt-12 font-medium">
+            &copy; 2026 PT PLN UP2B NTB (Persero). All rights reserved.
+        </p>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', function(e) {
+            e.preventDefault(); // Mencegah reload halaman
+
+            const userIdInput = document.getElementById('user-id').value;
+            const passwordInput = document.getElementById('password').value;
+            const errorMessage = document.getElementById('error-message');
+
+            // --- PENGATURAN ID & PASSWORD DI SINI ---
+            const VALID_USER_ID = "opsis1";
+            const VALID_PASSWORD = "hebat";
+
+            if (userIdInput === VALID_USER_ID && passwordInput === VALID_PASSWORD) {
+                // Jika sukses, simpan status login di browser (Session)
+                localStorage.setItem('isLoggedIn', 'true');
+                localStorage.setItem('username', userIdInput);
+                
+                // Alihkan ke halaman dashboard
+                window.location.href = 'index.html';
+            } else {
+                // Jika gagal, tampilkan pesan error
+                errorMessage.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>
