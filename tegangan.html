@@ -13,6 +13,13 @@
     <link rel="icon" href="data:,">
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+    <script>
+        // AUTH GUARD: Halaman internal hanya dapat diakses setelah login.
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "login.html";
+        }
+    </script>
+
 
     <!-- SIDEBAR -->
     <aside class="w-64 bg-white border-r border-slate-200 flex flex-col justify-between shadow-sm z-10 relative">
@@ -380,7 +387,7 @@
         if(logoutBtn) {
             logoutBtn.addEventListener('click', (e) => {
                 e.preventDefault();
-                localStorage.removeItem('isLoggedIn');
+                sessionStorage.removeItem('isLoggedIn');
                 window.location.href = 'login.html';
             });
         }

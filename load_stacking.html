@@ -23,6 +23,13 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 h-screen flex overflow-hidden">
+    <script>
+        // AUTH GUARD: Halaman internal hanya dapat diakses setelah login.
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "login.html";
+        }
+    </script>
+
 
     <!-- SIDEBAR -->
     <!-- Tambahan transisi w-0 untuk efek hide/show -->

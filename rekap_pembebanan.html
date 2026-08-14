@@ -15,6 +15,13 @@
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+    <script>
+        // AUTH GUARD: Halaman internal hanya dapat diakses setelah login.
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "login.html";
+        }
+    </script>
+
 
     <!-- SIDEBAR -->
     <aside id="sidebar" class="w-64 bg-white border-r border-slate-200 transition-all duration-300 ease-in-out shrink-0 overflow-hidden relative z-40">
@@ -306,7 +313,7 @@
             document.getElementById('info-trafo').innerText = `Terkalkulasi`;
         });
 
-        document.getElementById('logout-btn').addEventListener('click', (e) => { e.preventDefault(); localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html'; });
+        document.getElementById('logout-btn').addEventListener('click', (e) => { e.preventDefault(); sessionStorage.removeItem('isLoggedIn'); window.location.href = 'login.html'; });
     </script>
 </body>
 </html>

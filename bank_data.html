@@ -16,6 +16,13 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex overflow-hidden">
+    <script>
+        // AUTH GUARD: Halaman internal hanya dapat diakses setelah login.
+        if (sessionStorage.getItem("isLoggedIn") !== "true") {
+            window.location.href = "login.html";
+        }
+    </script>
+
 
     <!-- SIDEBAR -->
     <!-- Tambahan transisi w-0 untuk efek hide/show -->
@@ -208,7 +215,7 @@
             tbody.innerHTML = bodyHTML;
         });
 
-        document.getElementById('logout-btn').addEventListener('click', (e) => { e.preventDefault(); localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html'; });
+        document.getElementById('logout-btn').addEventListener('click', (e) => { e.preventDefault(); sessionStorage.removeItem('isLoggedIn'); window.location.href = 'login.html'; });
    // Fungsi menampilkan tombol download setelah data ditarik
         // Letakkan baris ini di dalam document.getElementById('filter-btn').addEventListener('click', () => {
         // Tepat di bawah baris: document.getElementById('result-info').innerText = `Ditemukan: ${filteredRows.length} Hari`;

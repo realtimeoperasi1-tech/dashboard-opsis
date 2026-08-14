@@ -1054,7 +1054,7 @@ function extractBPPData(workbook, targetDate) {
         const logoutBtn = document.getElementById('logout-btn');
         if(logoutBtn) {
             logoutBtn.addEventListener('click', (e) => {
-                e.preventDefault(); localStorage.removeItem('isLoggedIn'); window.location.href = 'login.html';
+                e.preventDefault(); sessionStorage.removeItem('isLoggedIn'); window.location.href = 'login.html';
             });
         }
     </script>
